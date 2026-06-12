@@ -77,6 +77,56 @@ export function roadTexture(theme) {
   g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, H); g.stroke();
   g.setLineDash([]);
 
+  // grietas finas serpenteantes
+  g.strokeStyle = 'rgba(12,15,32,0.30)';
+  g.lineWidth = 1.6;
+  for (let k = 0; k < 9; k++) {
+    let x = 50 + Math.random() * (W - 100);
+    let y = Math.random() * H;
+    g.beginPath(); g.moveTo(x, y);
+    for (let st = 0; st < 9; st++) {
+      x += (Math.random() - 0.5) * 36;
+      y += 14 + Math.random() * 26;
+      g.lineTo(x, y);
+      if (Math.random() > 0.7) { // ramificación
+        g.moveTo(x, y);
+        g.lineTo(x + (Math.random() - 0.5) * 40, y + Math.random() * 24);
+        g.moveTo(x, y);
+      }
+    }
+    g.stroke();
+  }
+
+  // parches de reasfaltado
+  for (let k = 0; k < 5; k++) {
+    g.save();
+    g.translate(60 + Math.random() * (W - 120), Math.random() * H);
+    g.rotate((Math.random() - 0.5) * 0.3);
+    g.fillStyle = `rgba(10,12,28,${0.10 + Math.random() * 0.08})`;
+    const pw = 50 + Math.random() * 80, ph = 70 + Math.random() * 120;
+    g.beginPath(); g.roundRect(-pw / 2, -ph / 2, pw, ph, 10); g.fill();
+    g.strokeStyle = 'rgba(245,243,235,0.10)';
+    g.lineWidth = 3; g.stroke();
+    g.restore();
+  }
+
+  // marcas de derrape (pares de arcos de neumático)
+  g.lineCap = 'round';
+  for (let k = 0; k < 6; k++) {
+    const x0 = 80 + Math.random() * (W - 160);
+    const y0 = Math.random() * H;
+    const bend = (Math.random() - 0.5) * 90;
+    for (const off of [0, 14]) {
+      g.strokeStyle = `rgba(8,10,24,${0.16 + Math.random() * 0.10})`;
+      g.lineWidth = 7;
+      g.beginPath();
+      g.moveTo(x0 + off, y0);
+      g.quadraticCurveTo(x0 + off + bend, y0 + 80, x0 + off + bend * 1.6, y0 + 170);
+      g.stroke();
+    }
+  }
+  g.lineCap = 'butt';
+
   // flechas de sentido pintadas (desgastadas)
   g.fillStyle = 'rgba(245,243,235,0.5)';
   for (let y = H / 8; y < H; y += H / 4) {
@@ -301,6 +351,78 @@ export function formulaSprite(text, color = '#9fd0ff') {
   }));
   sp.scale.set(36, 6.75, 1);
   return sp;
+}
+
+/** mapa de relieve de ruido (para asfalto y plásticos) */
+export function noiseBumpTexture(size = 256, contrast = 60) {
+  const c = canvas(size, size);
+  const g = c.getContext('2d');
+  const img = g.createImageData(size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 128 + (Math.random() - 0.5) * contrast;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  return tex;
+}
+
+/** trama de fibra de carbono */
+export function carbonTexture() {
+  const c = canvas(128, 128);
+  const g = c.getContext('2d');
+  g.fillStyle = '#1b1b26';
+  g.fillRect(0, 0, 128, 128);
+  const cell = 16;
+  for (let y = 0; y < 128 / cell; y++) {
+    for (let x = 0; x < 128 / cell; x++) {
+      const horiz = (x + y) % 2 === 0;
+      const grd = horiz
+        ? g.createLinearGradient(x * cell, 0, (x + 1) * cell, 0)
+        : g.createLinearGradient(0, y * cell, 0, (y + 1) * cell);
+      grd.addColorStop(0, '#14141d');
+      grd.addColorStop(0.5, '#34344a');
+      grd.addColorStop(1, '#14141d');
+      g.fillStyle = grd;
+      g.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(3, 3);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** plástico moteado para los personajes (color base + pecas + brillo) */
+export function plasticTexture(hex) {
+  const S = 256;
+  const c = canvas(S, S);
+  const g = c.getContext('2d');
+  const base = new THREE.Color(hex);
+  g.fillStyle = '#' + base.getHexString();
+  g.fillRect(0, 0, S, S);
+  // gradiente vertical sutil (más claro arriba, como juguete inyectado)
+  const grd = g.createLinearGradient(0, 0, 0, S);
+  grd.addColorStop(0, 'rgba(255,255,255,0.14)');
+  grd.addColorStop(0.55, 'rgba(255,255,255,0)');
+  grd.addColorStop(1, 'rgba(0,0,0,0.16)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, S, S);
+  // pecas de pigmento
+  for (let i = 0; i < 900; i++) {
+    const light = Math.random() > 0.5;
+    g.fillStyle = light
+      ? `rgba(255,255,255,${0.04 + Math.random() * 0.07})`
+      : `rgba(0,0,0,${0.04 + Math.random() * 0.07})`;
+    g.fillRect(Math.random() * S, Math.random() * S, 1.6, 1.6);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 /** rayas diagonales negro-amarillo de peligro */

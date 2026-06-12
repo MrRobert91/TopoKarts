@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {
   roadTexture, finishTexture, symbolTexture, boostTexture,
   poincareDiscTexture, textSprite, surfaceTexture, formulaSprite, glowTexture,
-  hazardTexture, coneStripesTexture,
+  hazardTexture, coneStripesTexture, noiseBumpTexture,
 } from './textures.js';
 
 const SYMBOLS = ['∞', 'χ', 'π', '⇄', '◯', '⬠', '△'];
@@ -166,8 +166,11 @@ export class TrackScene {
       formulas: tr.def.formulas ?? [],
       vMin, vMax,
     });
+    const surfBump = noiseBumpTexture(256, 60);
+    surfBump.repeat.set(40, 16);
     const mat = new THREE.MeshStandardMaterial({
-      map: tex, roughness: 0.6, metalness: 0.05, side: THREE.DoubleSide,
+      map: tex, roughness: 0.7, metalness: 0.04, side: THREE.DoubleSide,
+      bumpMap: surfBump, bumpScale: 0.5,
     });
     const mesh = new THREE.Mesh(geo, mat);
     mesh.receiveShadow = true;
@@ -199,8 +202,11 @@ export class TrackScene {
     const nSeg = Math.max(200, Math.round(tr.length / 1.4));
     const thick = 1.1;
 
+    const roadBump = noiseBumpTexture(256, 70);
+    roadBump.repeat.set(6, 60);
     const roadMat = new THREE.MeshStandardMaterial({
-      map: roadTexture(theme), roughness: 0.55, metalness: 0.05,
+      map: roadTexture(theme), roughness: 0.72, metalness: 0.04,
+      bumpMap: roadBump, bumpScale: 0.6,
     });
     const sideMat = new THREE.MeshStandardMaterial({
       color: new THREE.Color(theme.edge2).multiplyScalar(0.5), roughness: 0.7,
@@ -223,7 +229,8 @@ export class TrackScene {
             fr.pos.z + fr.B.z * q + fr.N.z * y);
           const ny = flipWinding ? -1 : 1;
           normals.push(fr.N.x * ny, fr.N.y * ny, fr.N.z * ny);
-          uvs.push(side, i / nSeg * (nSeg / 10));
+          // un tile de textura cada ~80 m para que el asfalto no se estire
+          uvs.push(side, (i / nSeg) * tr.length / 80);
         }
       }
       for (let i = 0; i < nSeg; i++) {
@@ -733,9 +740,10 @@ export class TrackScene {
   _decorDouble() {
     const colors = [0xff5d8f, 0x4ade80];
     for (let i = 0; i < 2; i++) {
-      const x = i === 0 ? 95 : -95;
+      const x = i === 0 ? 85 : -85;
+      // radio contenido en el lóbulo para no invadir la pista ensanchada
       const wheel = new THREE.Mesh(
-        new THREE.TorusGeometry(42, 5, 14, 50),
+        new THREE.TorusGeometry(32, 4, 14, 50),
         new THREE.MeshStandardMaterial({ color: colors[i], roughness: 0.4, emissive: colors[i], emissiveIntensity: 0.35 }));
       wheel.position.set(x, 14, 0);
       this.group.add(wheel);
@@ -743,8 +751,8 @@ export class TrackScene {
       const cabins = new THREE.Group();
       for (let j = 0; j < 8; j++) {
         const a = (j / 8) * Math.PI * 2;
-        const cab = new THREE.Mesh(new THREE.SphereGeometry(3.2, 12, 10), cabMat);
-        cab.position.set(42 * Math.cos(a), 42 * Math.sin(a), 0);
+        const cab = new THREE.Mesh(new THREE.SphereGeometry(2.6, 12, 10), cabMat);
+        cab.position.set(32 * Math.cos(a), 32 * Math.sin(a), 0);
         cabins.add(cab);
       }
       cabins.position.copy(wheel.position);
@@ -752,7 +760,7 @@ export class TrackScene {
       this.animated.push((t) => { cabins.rotation.z = t * 0.15 * (i ? -1 : 1); wheel.rotation.z = t * 0.15 * (i ? -1 : 1); });
 
       const sign = textSprite(`AGUJERO ${i + 1}`, { color: i ? '#4ade80' : '#ff5d8f' });
-      sign.position.set(x, 72, 0);
+      sign.position.set(x, 60, 0);
       this.group.add(sign);
     }
     // globos de feria flotando

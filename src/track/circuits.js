@@ -52,7 +52,7 @@ export const CIRCUITS = [
     minimap: 'mobius',
     laps: 3,
     twistTurns: 0.5,
-    halfWidth: 10,
+    halfWidth: 20,
     samples: 1400,
     points: sample(a => {
       const r = 95 + 18 * Math.sin(2 * a + 0.6);
@@ -65,14 +65,14 @@ export const CIRCUITS = [
     },
     formulas: ['χ = 0', '1 cara · 1 borde', '½ giro: no orientable', '(u, v) ~ (u+2π, −v)'],
     itemBoxes: [0.12, 0.13, 0.14, 0.37, 0.38, 0.39, 0.62, 0.63, 0.64, 0.87, 0.88, 0.89]
-      .map((s, i) => ({ s, q: [-5, 0, 5][i % 3] })),
-    boostPads: [{ s: 0.30, q: 0 }, { s: 0.55, q: -4 }, { s: 0.80, q: 4 }],
+      .map((s, i) => ({ s, q: [-10, 0, 10][i % 3] })),
+    boostPads: [{ s: 0.30, q: 0 }, { s: 0.55, q: -8 }, { s: 0.80, q: 8 }],
     rings: [0.2, 0.45, 0.7],
     tunnels: [{ s: 0.58, len: 40 }],
     obstacles: [
-      { type: 'spinner', s: 0.25, q: 0 },
-      { type: 'cone', s: 0.48, q: -5 }, { type: 'cone', s: 0.49, q: 4 },
-      { type: 'spinner', s: 0.74, q: 0 },
+      { type: 'spinner', s: 0.25, q: -7 }, { type: 'spinner', s: 0.255, q: 9 },
+      { type: 'cone', s: 0.48, q: -11 }, { type: 'cone', s: 0.49, q: 8 },
+      { type: 'spinner', s: 0.74, q: 0 }, { type: 'bumper', s: 0.745, q: 13 },
     ],
     toasts: { wrap: 'Tu orientación se ha invertido: misma cinta, “otra cara”.' },
     challenge: 'Cruza la meta con la orientación invertida.',
@@ -129,7 +129,7 @@ export const CIRCUITS = [
     minimap: 'double',
     laps: 3,
     twistTurns: 0,
-    halfWidth: 9.5,
+    halfWidth: 19,
     samples: 1600,
     points: sample(a => V(
       150 * Math.sin(a),
@@ -143,15 +143,15 @@ export const CIRCUITS = [
     },
     formulas: ['g = 2', 'χ = 2 − 2g = −2', 'π₁ no abeliano', 'z² = x(x−1)(x−2)(x−3)(x−4)'],
     itemBoxes: [0.10, 0.11, 0.12, 0.35, 0.36, 0.37, 0.60, 0.61, 0.62, 0.85, 0.86, 0.87]
-      .map((s, i) => ({ s, q: [-4.5, 0, 4.5][i % 3] })),
-    boostPads: [{ s: 0.18, q: 0 }, { s: 0.43, q: 0 }, { s: 0.68, q: 0 }, { s: 0.93, q: 0 }],
+      .map((s, i) => ({ s, q: [-9, 0, 9][i % 3] })),
+    boostPads: [{ s: 0.18, q: 0 }, { s: 0.43, q: -7 }, { s: 0.68, q: 7 }, { s: 0.93, q: 0 }],
     rings: [0.12, 0.38, 0.62, 0.88],
     tunnels: [{ s: 0.31, len: 36 }, { s: 0.81, len: 36 }],
     obstacles: [
-      { type: 'bumper', s: 0.24, q: 0 },
-      { type: 'cone', s: 0.5, q: -4 }, { type: 'cone', s: 0.505, q: 4 },
+      { type: 'bumper', s: 0.24, q: -8 }, { type: 'bumper', s: 0.245, q: 8 },
+      { type: 'cone', s: 0.5, q: -8 }, { type: 'cone', s: 0.505, q: 8 },
       { type: 'bumper', s: 0.74, q: 0 },
-      { type: 'spinner', s: 0.95, q: 0 },
+      { type: 'spinner', s: 0.95, q: -6 }, { type: 'spinner', s: 0.955, q: 8 },
     ],
     toasts: {
       half: 'Has rodeado el Agujero 1. Ahora toca el Agujero 2: son caminos distintos.',
@@ -169,7 +169,7 @@ export const CIRCUITS = [
     minimap: 'hyper',
     laps: 3,
     twistTurns: 0,
-    halfWidth: 8.5,
+    halfWidth: 17,
     samples: 1600,
     points: sample(a => {
       const r = 88 + 42 * Math.sin(3 * a);
@@ -182,14 +182,14 @@ export const CIRCUITS = [
     },
     formulas: ['K = −1', '𝔻 = { z : |z| < 1 }', 'ds = 2|dz| / (1−|z|²)', 'Σ∠△ < π'],
     itemBoxes: [0.07, 0.08, 0.09, 0.32, 0.33, 0.34, 0.57, 0.58, 0.59, 0.82, 0.83, 0.84]
-      .map((s, i) => ({ s, q: [-4, 0, 4][i % 3] })),
-    boostPads: [{ s: 0.16, q: 0 }, { s: 0.5, q: 0 }, { s: 0.83, q: 0 }],
+      .map((s, i) => ({ s, q: [-8, 0, 8][i % 3] })),
+    boostPads: [{ s: 0.16, q: 0 }, { s: 0.5, q: -6 }, { s: 0.83, q: 6 }],
     rings: [0.1, 0.43, 0.76],
     tunnels: [{ s: 0.6, len: 44 }],
     obstacles: [
-      { type: 'spinner', s: 0.21, q: 0 },
-      { type: 'cone', s: 0.37, q: -3 }, { type: 'cone', s: 0.38, q: 3 },
-      { type: 'bumper', s: 0.55, q: 0 },
+      { type: 'spinner', s: 0.21, q: -6 }, { type: 'spinner', s: 0.215, q: 8 },
+      { type: 'cone', s: 0.37, q: -7 }, { type: 'cone', s: 0.38, q: 7 },
+      { type: 'bumper', s: 0.55, q: -9 }, { type: 'bumper', s: 0.555, q: 9 },
       { type: 'cone', s: 0.7, q: 0 },
       { type: 'spinner', s: 0.9, q: 0 },
     ],

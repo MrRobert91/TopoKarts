@@ -1,4 +1,16 @@
 import * as THREE from 'three';
+import { carbonTexture, plasticTexture, noiseBumpTexture } from '../track/textures.js';
+
+// texturas compartidas entre todos los karts (se crean una vez)
+let _shared = null;
+function sharedTextures() {
+  _shared ??= {
+    carbon: carbonTexture(),
+    paintBump: (() => { const t = noiseBumpTexture(128, 24); t.repeat.set(4, 4); return t; })(),
+    tireBump: (() => { const t = noiseBumpTexture(128, 90); t.repeat.set(8, 2); return t; })(),
+  };
+  return _shared;
+}
 
 /**
  * Karts procedurales con personalidad: cada personaje tiene una silueta
@@ -11,16 +23,23 @@ export function buildKart(character) {
   const color = new THREE.Color(character.color);
   const accent = new THREE.Color(character.accent ?? 0xffffff);
 
+  const tex = sharedTextures();
   const M = {
     paint: new THREE.MeshPhysicalMaterial({
       color, clearcoat: 1, clearcoatRoughness: 0.12, roughness: 0.32, metalness: 0.1,
+      bumpMap: tex.paintBump, bumpScale: 0.012, // grano metalizado sutil
     }),
     accent: new THREE.MeshPhysicalMaterial({
       color: accent, clearcoat: 0.8, clearcoatRoughness: 0.2, roughness: 0.4, metalness: 0.1,
+      bumpMap: tex.paintBump, bumpScale: 0.012,
     }),
-    dark: new THREE.MeshStandardMaterial({ color: 0x23233a, roughness: 0.6, metalness: 0.3 }),
+    dark: new THREE.MeshStandardMaterial({
+      map: tex.carbon, roughness: 0.45, metalness: 0.35, // fibra de carbono
+    }),
     chrome: new THREE.MeshStandardMaterial({ color: 0xd8dce8, roughness: 0.22, metalness: 0.95 }),
-    tire: new THREE.MeshStandardMaterial({ color: 0x17171f, roughness: 0.92 }),
+    tire: new THREE.MeshStandardMaterial({
+      color: 0x17171f, roughness: 0.92, bumpMap: tex.tireBump, bumpScale: 0.05,
+    }),
     glass: new THREE.MeshPhysicalMaterial({
       color: 0x9fd4ff, transparent: true, opacity: 0.4, roughness: 0.06, metalness: 0.1,
     }),
@@ -231,8 +250,11 @@ const BODY_BUILDERS = {
 
 function buildPilot(character, M) {
   const g = new THREE.Group();
+  const tex = sharedTextures();
   const headMat = new THREE.MeshPhysicalMaterial({
-    color: character.color, roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.3,
+    map: plasticTexture(character.color),
+    roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.3,
+    bumpMap: tex.paintBump, bumpScale: 0.02, // plástico de juguete moteado
   });
 
   let head;
