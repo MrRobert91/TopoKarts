@@ -69,7 +69,6 @@ export const CIRCUITS = [
     boostPads: [{ s: 0.30, q: 0 }, { s: 0.55, q: -4 }, { s: 0.80, q: 4 }],
     rings: [0.2, 0.45, 0.7],
     tunnels: [{ s: 0.58, len: 40 }],
-    gaps: [{ s0: 0.40, s1: 0.50, side: 1 }, { s0: 0.67, s1: 0.75, side: -1 }],
     obstacles: [
       { type: 'spinner', s: 0.25, q: 0 },
       { type: 'cone', s: 0.48, q: -5 }, { type: 'cone', s: 0.49, q: 4 },
@@ -139,7 +138,7 @@ export const CIRCUITS = [
     ), 96),
     theme: {
       skyTop: 0x3d1102, skyBottom: 0xff9a3c, fog: 0xc05a18, fogDensity: 0.0026,
-      road: 0xfff3e0, roadLine: 0xff5d2e, edge: 0xff5d8f, edge2: 0x4ade80,
+      road: 0xf0dfc4, roadLine: 0xff5d2e, edge: 0xff5d8f, edge2: 0x4ade80,
       decor: 'double', light: 0xffe8c8, ambient: 0xffb070,
     },
     formulas: ['g = 2', 'χ = 2 − 2g = −2', 'π₁ no abeliano', 'z² = x(x−1)(x−2)(x−3)(x−4)'],
@@ -148,7 +147,6 @@ export const CIRCUITS = [
     boostPads: [{ s: 0.18, q: 0 }, { s: 0.43, q: 0 }, { s: 0.68, q: 0 }, { s: 0.93, q: 0 }],
     rings: [0.12, 0.38, 0.62, 0.88],
     tunnels: [{ s: 0.31, len: 36 }, { s: 0.81, len: 36 }],
-    gaps: [{ s0: 0.205, s1: 0.27, side: 1 }, { s0: 0.70, s1: 0.78, side: -1 }],
     obstacles: [
       { type: 'bumper', s: 0.24, q: 0 },
       { type: 'cone', s: 0.5, q: -4 }, { type: 'cone', s: 0.505, q: 4 },
@@ -179,7 +177,7 @@ export const CIRCUITS = [
     }, 96),
     theme: {
       skyTop: 0x021515, skyBottom: 0x0b5f5a, fog: 0x073d3c, fogDensity: 0.0036,
-      road: 0xd9fff4, roadLine: 0x0fae9b, edge: 0x4ade80, edge2: 0xffd23f,
+      road: 0xb2e4d2, roadLine: 0x0fae9b, edge: 0x4ade80, edge2: 0xffd23f,
       decor: 'hyper', light: 0xd8fff0, ambient: 0x5fd0b8,
     },
     formulas: ['K = −1', '𝔻 = { z : |z| < 1 }', 'ds = 2|dz| / (1−|z|²)', 'Σ∠△ < π'],
@@ -188,7 +186,6 @@ export const CIRCUITS = [
     boostPads: [{ s: 0.16, q: 0 }, { s: 0.5, q: 0 }, { s: 0.83, q: 0 }],
     rings: [0.1, 0.43, 0.76],
     tunnels: [{ s: 0.6, len: 44 }],
-    gaps: [{ s0: 0.26, s1: 0.33, side: 1 }, { s0: 0.69, s1: 0.76, side: -1 }],
     obstacles: [
       { type: 'spinner', s: 0.21, q: 0 },
       { type: 'cone', s: 0.37, q: -3 }, { type: 'cone', s: 0.38, q: 3 },

@@ -8,57 +8,93 @@ function canvas(w, h) {
 
 const css = (hex) => '#' + hex.toString(16).padStart(6, '0');
 
-/** textura de asfalto matemático: líneas de coordenadas, borde y línea central */
+/** grano de asfalto + desgaste sobre un contexto dado */
+function asphaltNoise(g, W, H, amount = 2600) {
+  for (let i = 0; i < amount; i++) {
+    const v = Math.random();
+    g.fillStyle = v > 0.5
+      ? `rgba(255,255,255,${0.025 + Math.random() * 0.05})`
+      : `rgba(20,24,48,${0.03 + Math.random() * 0.06})`;
+    const sz = 1 + Math.random() * 2.2;
+    g.fillRect(Math.random() * W, Math.random() * H, sz, sz);
+  }
+  // bandas de rodadura (zonas oscurecidas donde pasan las ruedas)
+  for (const x of [W * 0.30, W * 0.70]) {
+    const grd = g.createLinearGradient(x - W * 0.09, 0, x + W * 0.09, 0);
+    grd.addColorStop(0, 'rgba(20,22,40,0)');
+    grd.addColorStop(0.5, 'rgba(20,22,40,0.13)');
+    grd.addColorStop(1, 'rgba(20,22,40,0)');
+    g.fillStyle = grd;
+    g.fillRect(x - W * 0.09, 0, W * 0.18, H);
+  }
+}
+
+/** pianos rojo-blanco en los bordes */
+function curbs(g, W, H, curbW) {
+  for (const x0 of [0, W - curbW]) {
+    for (let y = 0; y < H; y += 32) {
+      g.fillStyle = (y / 32) % 2 ? '#e8362e' : '#f5f2ec';
+      g.fillRect(x0, y, curbW, 32);
+    }
+    // sombreado interior del piano
+    const grd = g.createLinearGradient(x0, 0, x0 + curbW, 0);
+    grd.addColorStop(x0 === 0 ? 1 : 0, 'rgba(0,0,0,0.25)');
+    grd.addColorStop(x0 === 0 ? 0 : 1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd;
+    g.fillRect(x0, 0, curbW, H);
+  }
+}
+
+/** textura de carretera realista: asfalto, pianos rojo-blanco y marcas viales */
 export function roadTexture(theme) {
-  const W = 256, H = 512; // H = a lo largo de la pista
+  const W = 512, H = 1024; // H = a lo largo de la pista
   const c = canvas(W, H);
   const g = c.getContext('2d');
 
-  g.fillStyle = css(theme.road);
+  // asfalto coloreado del tema, oscurecido para contrastar con el cielo
+  const base = new THREE.Color(theme.road).multiplyScalar(0.8);
+  g.fillStyle = '#' + base.getHexString();
   g.fillRect(0, 0, W, H);
+  asphaltNoise(g, W, H, 3400);
 
-  // rejilla de coordenadas estilo pizarra
-  g.strokeStyle = 'rgba(80,90,160,0.18)';
+  // rejilla de coordenadas sutil (la firma matemática del juego)
+  g.strokeStyle = 'rgba(70,80,150,0.13)';
   g.lineWidth = 2;
-  for (let x = 0; x <= W; x += W / 8) {
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke();
-  }
-  for (let y = 0; y <= H; y += H / 16) {
-    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
-  }
+  for (let x = 0; x <= W; x += W / 8) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  for (let y = 0; y <= H; y += H / 16) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+
+  curbs(g, W, H, 26);
+
+  // líneas blancas de carril junto a los pianos
+  g.fillStyle = 'rgba(245,243,235,0.85)';
+  g.fillRect(34, 0, 5, H);
+  g.fillRect(W - 39, 0, 5, H);
 
   // línea central discontinua
   g.strokeStyle = css(theme.roadLine);
-  g.lineWidth = 7;
-  g.setLineDash([40, 28]);
+  g.lineWidth = 10;
+  g.setLineDash([70, 46]);
   g.beginPath(); g.moveTo(W / 2, 0); g.lineTo(W / 2, H); g.stroke();
   g.setLineDash([]);
 
-  // bandas laterales
-  g.fillStyle = css(theme.edge);
-  g.globalAlpha = 0.85;
-  g.fillRect(0, 0, 10, H);
-  g.fillRect(W - 10, 0, 10, H);
-  g.globalAlpha = 1;
-
-  // flechas de sentido (tiza)
-  g.fillStyle = 'rgba(60,70,140,0.35)';
+  // flechas de sentido pintadas (desgastadas)
+  g.fillStyle = 'rgba(245,243,235,0.5)';
   for (let y = H / 8; y < H; y += H / 4) {
     g.beginPath();
-    g.moveTo(W / 2, y - 26);
-    g.lineTo(W / 2 - 17, y);
-    g.lineTo(W / 2 - 6, y);
-    g.lineTo(W / 2 - 6, y + 22);
-    g.lineTo(W / 2 + 6, y + 22);
-    g.lineTo(W / 2 + 6, y);
-    g.lineTo(W / 2 + 17, y);
+    g.moveTo(W / 2, y - 44);
+    g.lineTo(W / 2 - 28, y);
+    g.lineTo(W / 2 - 10, y);
+    g.lineTo(W / 2 - 10, y + 38);
+    g.lineTo(W / 2 + 10, y + 38);
+    g.lineTo(W / 2 + 10, y);
+    g.lineTo(W / 2 + 28, y);
     g.closePath(); g.fill();
   }
 
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = THREE.RepeatWrapping;
   tex.wrapT = THREE.RepeatWrapping;
-  tex.anisotropy = 8;
+  tex.anisotropy = 16;
   tex.colorSpace = THREE.SRGBColorSpace;
   return tex;
 }
@@ -175,30 +211,35 @@ export function surfaceTexture(theme, { bandFrac = 0.12, formulas = [], vMin = 0
   const c = canvas(W, H);
   const g = c.getContext('2d');
 
-  g.fillStyle = css(theme.road);
+  const baseCol = new THREE.Color(theme.road).multiplyScalar(0.72);
+  g.fillStyle = '#' + baseCol.getHexString();
   g.fillRect(0, 0, W, H);
+  asphaltNoise(g, W, H, 9000);
 
   // mapeo v (0..1 de la textura puede cubrir solo parte del período)
   const vToY = (v) => H * (1 - (v - vMin) / (vMax - vMin));
   const bandTop = vToY(0.5 + bandFrac), bandBot = vToY(0.5 - bandFrac);
 
-  // banda de carrera
-  g.fillStyle = css(theme.band ?? theme.edge);
-  g.globalAlpha = 0.30;
+  // banda de carrera (asfalto más oscuro para que contraste)
+  const bandCol = new THREE.Color(theme.band ?? theme.edge).multiplyScalar(0.75);
+  g.fillStyle = '#' + bandCol.getHexString();
+  g.globalAlpha = 0.55;
   g.fillRect(0, Math.min(bandTop, bandBot), W, Math.abs(bandBot - bandTop));
   g.globalAlpha = 1;
 
   // rejilla de coordenadas
-  g.strokeStyle = 'rgba(70,80,150,0.20)';
+  g.strokeStyle = 'rgba(70,80,150,0.16)';
   g.lineWidth = 2;
   for (let x = 0; x <= W; x += W / 48) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
   for (let y = 0; y <= H; y += H / 24) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
 
-  // bordes de la banda
-  for (const [y, col] of [[bandTop, theme.edge], [bandBot, theme.edge2]]) {
-    g.strokeStyle = css(col);
-    g.lineWidth = 7;
-    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+  // pianos rojo-blanco en los bordes de la banda de carrera
+  for (const y of [bandTop, bandBot]) {
+    const yy = Math.round(Math.min(Math.max(y - 7, 0), H - 14));
+    for (let x = 0; x < W; x += 36) {
+      g.fillStyle = (x / 36) % 2 ? '#e8362e' : '#f5f2ec';
+      g.fillRect(x, yy, 36, 14);
+    }
   }
 
   // línea central discontinua
@@ -260,6 +301,38 @@ export function formulaSprite(text, color = '#9fd0ff') {
   }));
   sp.scale.set(36, 6.75, 1);
   return sp;
+}
+
+/** rayas diagonales negro-amarillo de peligro */
+export function hazardTexture() {
+  const c = canvas(128, 128);
+  const g = c.getContext('2d');
+  g.fillStyle = '#f7c948';
+  g.fillRect(0, 0, 128, 128);
+  g.fillStyle = '#1d1d24';
+  for (let i = -4; i < 8; i++) {
+    g.beginPath();
+    g.moveTo(i * 32, 0); g.lineTo(i * 32 + 32, 0);
+    g.lineTo(i * 32 + 32 + 64, 128); g.lineTo(i * 32 + 64, 128);
+    g.closePath(); g.fill();
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** bandas rojo-blanco para conos */
+export function coneStripesTexture() {
+  const c = canvas(64, 128);
+  const g = c.getContext('2d');
+  for (let i = 0; i < 4; i++) {
+    g.fillStyle = i % 2 ? '#f5f2ec' : '#e8362e';
+    g.fillRect(0, i * 32, 64, 32);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
 }
 
 /** brillo radial para halos/nebulosas */

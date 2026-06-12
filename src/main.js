@@ -18,8 +18,15 @@ const uiRoot = document.getElementById('ui-root');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.18;
+renderer.toneMappingExposure = 1.06;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// entorno PBR para reflejos realistas en pinturas y metales
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envMap = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 function resize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -103,6 +110,7 @@ function startRace(def) {
     difficulty: 'normal',
     audio,
     hud,
+    envMap,
   });
   hud.track = race.track;
   race.input = input;

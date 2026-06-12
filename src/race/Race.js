@@ -25,6 +25,10 @@ export class Race {
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.FogExp2(circuitDef.theme.fog, circuitDef.theme.fogDensity);
+    if (opts.envMap) {
+      this.scene.environment = opts.envMap;
+      this.scene.environmentIntensity = 0.42;
+    }
 
     this.track = new Track(circuitDef);
     this.trackScene = new TrackScene(this.track);
@@ -49,13 +53,19 @@ export class Race {
 
   _buildLights() {
     const theme = this.def.theme;
-    const sun = new THREE.DirectionalLight(theme.light, 2.6);
-    sun.position.set(120, 220, 80);
+    const sun = new THREE.DirectionalLight(theme.light, 2.05);
+    sun.position.set(140, 260, 90);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    const sc = sun.shadow.camera;
+    sc.left = -280; sc.right = 280; sc.top = 280; sc.bottom = -280;
+    sc.near = 40; sc.far = 900;
+    sun.shadow.bias = -0.0006;
     this.scene.add(sun);
     const ambient = new THREE.Color(theme.ambient);
-    this.scene.add(new THREE.HemisphereLight(ambient, ambient.clone().multiplyScalar(0.45), 1.6));
+    this.scene.add(new THREE.HemisphereLight(ambient, ambient.clone().multiplyScalar(0.5), 1.0));
     // relleno desde abajo: Möbius y el interior del toro también se conducen
-    const fill = new THREE.DirectionalLight(theme.ambient, 1.3);
+    const fill = new THREE.DirectionalLight(theme.ambient, 0.9);
     fill.position.set(-150, -220, -120);
     this.scene.add(fill);
   }

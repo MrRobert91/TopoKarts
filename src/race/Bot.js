@@ -39,6 +39,8 @@ export class BotController {
       if (tr.kind === 'torus' && this.cfg.skill > 0.7 && Math.sin(this.wander * 3 + kart.s * 0.004) > 0.86) {
         this.targetQ = tr.lateralPeriod / 2 * Math.sign(Math.sin(this.wander));
       }
+      // sin quitamiedos: no apuntar nunca al borde
+      if (!tr.isSurface) this.targetQ = THREE.MathUtils.clamp(this.targetQ, -(w - 2.8), w - 2.8);
     }
 
     // dirección hacia targetQ

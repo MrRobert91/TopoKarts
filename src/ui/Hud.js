@@ -24,16 +24,23 @@ export class Hud {
     el.className = 'hud';
     el.innerHTML = `
       <div class="top-row">
-        <div class="lap-pos">
+        <div class="pos-card">
           <div class="position"><span class="pos-n">6</span><sup class="pos-suf">º</sup></div>
-          <div class="lap">Vuelta <span class="lap-n">1</span>/<span class="lap-t">3</span></div>
+          <div class="lap-chip">VUELTA <span class="lap-n">1</span><em>/</em><span class="lap-t">3</span></div>
         </div>
-        <div class="item-slot"><span class="item-icon"></span></div>
+        <div class="item-card">
+          <div class="item-slot"><span class="item-icon"></span></div>
+          <div class="item-label">OBJETO</div>
+        </div>
       </div>
       <div class="bottom-row">
-        <div class="speed"><span class="speed-n">0</span> <small>km/h</small><br>
-          <small class="curv-ind">curvatura: —</small></div>
-        <div class="minimap-wrap">
+        <div class="speed-card">
+          <div class="speed"><span class="speed-n">0</span><small>km/h</small></div>
+          <div class="speed-bar"><div class="speed-fill"></div></div>
+          <div class="curv-ind">curvatura —</div>
+        </div>
+        <div class="map-card">
+          <div class="map-head">MAPA TOPOLÓGICO <span class="map-key">M</span></div>
           <canvas class="minimap" width="172" height="172"></canvas>
           <div class="orient-badge">orientación →</div>
         </div>
@@ -50,7 +57,7 @@ export class Hud {
       el,
       posN: q('.pos-n'), posSuf: q('.pos-suf'), lapN: q('.lap-n'), lapT: q('.lap-t'),
       itemSlot: q('.item-slot'), itemIcon: q('.item-icon'),
-      speedN: q('.speed-n'), curvInd: q('.curv-ind'),
+      speedN: q('.speed-n'), curvInd: q('.curv-ind'), speedFill: q('.speed-fill'),
       minimap: q('.minimap'), mctx: q('.minimap').getContext('2d'),
       orientBadge: q('.orient-badge'),
       toastEl: q('.edu-toast'), toastT: 0,
@@ -139,6 +146,9 @@ export class Hud {
       p.posSuf.textContent = 'º';
       p.lapN.textContent = Math.min(race.laps, kart.lap + 1);
       p.speedN.textContent = Math.round(Math.abs(kart.v) * 3.6);
+      const pct = Math.min(100, Math.abs(kart.v) / 66 * 100);
+      p.speedFill.style.width = pct + '%';
+      p.speedFill.classList.toggle('boosting', kart.boostT > 0);
 
       // indicador de curvatura local (gaussiana real en superficies)
       let label;

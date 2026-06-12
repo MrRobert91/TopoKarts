@@ -126,18 +126,6 @@ export class Track {
     return k * k;
   }
 
-  /** ¿hay quitamiedos en (s, lado)? En los huecos (def.gaps) te puedes caer. */
-  hasBarrier(s, side) {
-    if (this.isSurface) return true;
-    const gaps = this.def.gaps;
-    if (!gaps) return true;
-    const f = (((s % this.length) + this.length) % this.length) / this.length;
-    for (const g of gaps) {
-      if (f >= g.s0 && f <= g.s1 && (g.side === 0 || g.side === side)) return false;
-    }
-    return true;
-  }
-
   widthAt(s) {
     if (this.isSurface) return this.lateralPeriod / 2;
     if (!this.def.widthFn) return this.halfWidth;

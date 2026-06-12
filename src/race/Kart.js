@@ -189,23 +189,13 @@ export class Kart {
         }
       }
     } else {
-      // cinta: barrera con chispas… salvo en los huecos, donde TE CAES
+      // cinta SIN quitamiedos: el piano avisa con chispas y, si sigues, te caes
       const w = tr.widthAt(this.s);
-      const lim = w - 1.0;
-      if (Math.abs(this.q) > lim) {
-        const side = Math.sign(this.q);
-        if (tr.hasBarrier(this.s, side)) {
-          this.q = side * lim;
-          if (Math.abs(this.v) > 8) {
-            this.fx.edge = true;
-            this.v *= 1 - 1.6 * dt;
-          }
-          if (Math.sign(this.heading) === side) this.heading *= 1 - Math.min(1, 8 * dt);
-        } else if (Math.abs(this.q) > w + 2.0) {
-          this.fallingOff = true;
-          this.fallT = 1.35;
-          this.fx.fall = true;
-        }
+      if (Math.abs(this.q) > w - 1.2 && Math.abs(this.v) > 8) this.fx.edge = true;
+      if (Math.abs(this.q) > w + 1.6) {
+        this.fallingOff = true;
+        this.fallT = 1.35;
+        this.fx.fall = true;
       }
     }
 
