@@ -2,21 +2,19 @@ import * as THREE from 'three';
 import { buildKart } from './KartVisual.js';
 
 const BASE_TOP_SPEED = 46;     // m/s
-const BASE_ACCEL = 30;
-const BRAKE = 55;
-const FRICTION = 14;
-const OFFROAD_FACTOR = 0.45;
-const TURN_RATE = 1.9;         // rad/s a baja velocidad
+const BASE_ACCEL = 34;
+const BRAKE = 60;
+const FRICTION = 16;
+const TURN_RATE = 2.1;         // rad/s
+const CENTER_RATE = 2.4;       // auto-alineado con la pista (sensación arcade)
+const MAX_HEADING = 0.85;      // el kart nunca queda atravesado
 
 /**
  * Kart en coordenadas de carretera (s, q, heading).
- *  - s: longitud de arco a lo largo de la spline (continua, sin acotar)
- *  - q: desplazamiento lateral
- *  - heading: ángulo respecto a la tangente de la pista
- *  - flip: nº de vueltas acumuladas (en Möbius cambia la cara de la cinta)
- *
- * La curvatura con signo de la pista acopla s y heading: si no giras en una
- * curva, te vas hacia fuera, exactamente como en una carretera de verdad.
+ * Modelo arcade: el heading se auto-centra hacia la dirección de la pista,
+ * así que girar desplaza lateralmente y soltar endereza. El kart está
+ * SIEMPRE pegado a la superficie (no hay caídas que atraviesen el suelo):
+ * los bordes de las cintas son barreras con chispas.
  */
 export class Kart {
   constructor(track, character, { isBot = false, name = character.name } = {}) {
@@ -32,92 +30,73 @@ export class Kart {
     // estado físico
     this.s = 0;
     this.q = 0;
+    this.qTotal = 0;       // acumulado (ciclo B en el toro)
     this.heading = 0;
+    this.steerS = 0;       // volante suavizado
     this.v = 0;
-    this.flip = 0;       // wraps acumulados (cara de la cinta en Möbius)
-    this.lapsDone = 0;
-    this.maxWrap = 0;    // mayor nº de wrap alcanzado (evita farmear la meta)
+    this.flip = 0;
+    this.maxWrap = 0;
 
     // estado de juego
     this.item = null;
     this.itemRolling = 0;
     this.boostT = 0;
     this.boostPower = 1;
-    this.spinT = 0;       // girando tras un golpe
-    this.fallT = 0;       // cayendo fuera de la pista
+    this.spinT = 0;
+    this.fallT = 0;        // animación de respawn manual
     this.shielded = false;
-    this.flippedControls = 0; // Orientation Flip recibido
-    this.assistT = 0;     // Geodesic Assist activo
-    this.unfoldT = 0;     // Surface Unfolder activo
+    this.flippedControls = 0;
+    this.assistT = 0;
+    this.unfoldT = 0;
     this.finished = false;
     this.finishTime = 0;
 
-    // derrape
     this.driftDir = 0;
     this.driftCharge = 0;
+
+    // flags de efectos para Race (chispas, etc.)
+    this.fx = { edge: false, drift: false, landed: false };
 
     this._frame = {};
     this._wheelSpin = 0;
     this._steerVis = 0;
-    this._lastPadHit = new WeakMap();
-
-    // curvatura con signo precalculada
-    this._kappaCache = new Map();
   }
 
-  /** curvatura con signo en s: >0 si la pista gira hacia +q (derecha) */
-  signedCurvature(s) {
-    const tr = this.track;
-    const key = Math.round((((s % tr.length) + tr.length) % tr.length) * 2);
-    let k = this._kappaCache.get(key);
-    if (k === undefined) {
-      const f0 = tr.frameAt(s - 2, 0, {});
-      const f1 = tr.frameAt(s + 2, 0, {});
-      k = f1.T.clone().sub(f0.T).dot(f0.B) / 4;
-      this._kappaCache.set(key, k);
-    }
-    return k;
-  }
+  signedCurvature(s) { return this.track.signedCurvature(s); }
 
-  get effectiveSpeed() {
-    return this.v;
-  }
+  get lap() { return Math.max(0, this.maxWrap); }
 
-  get totalProgress() { return this.s; }
-
-  get lap() { return Math.max(0, Math.floor(this.maxWrap / this.wrapsPerLap)); }
-  get wrapsPerLap() { return 1; }
-
-  /** orientación topológica actual (true = invertida) */
   get orientationFlipped() {
     return this.track.nonOrientable && (((this.flip % 2) + 2) % 2) === 1;
   }
 
-  placeAtGrid(index, count) {
-    const w = this.track.widthAt(0);
+  placeAtGrid(index) {
     const row = Math.floor(index / 2);
-    // parrilla justo después de la meta para que flip/orientación empiecen limpios
+    const w = this.track.isSurface ? this.track.bandHalf : this.track.widthAt(0);
     this.s = 8 + row * 7;
     this.q = (index % 2 === 0 ? -1 : 1) * w * 0.42;
+    this.qTotal = this.q;
     this.heading = 0;
     this.v = 0;
     this.flip = 0;
-    this.syncVisual(0, 0);
+    this.syncVisual(0);
   }
 
   update(dt, controls, stats = this.character.stats) {
     const tr = this.track;
+    this.fx.edge = false;
+    this.fx.drift = false;
 
     if (this.fallT > 0) {
       this.fallT -= dt;
       if (this.fallT <= 0) this._respawn();
-      this.syncVisual(0, dt);
+      this.syncVisual(dt);
       return;
     }
 
     if (this.spinT > 0) {
       this.spinT -= dt;
-      this.v = Math.max(0, this.v - 40 * dt);
+      this.v = Math.max(0, this.v - 42 * dt);
       controls = { left: false, right: false, accel: false, brake: false, drift: false };
     }
 
@@ -127,77 +106,98 @@ export class Kart {
       controls = { ...controls, left: controls.right, right: l };
     }
 
-    const w = tr.widthAt(this.s);
-    const offroad = Math.abs(this.q) > w - 0.6;
-    const falling = Math.abs(this.q) > w + 3.2;
-    if (falling && this.fallT <= 0) {
-      this.fallT = 1.15;
-      this.v = 0;
-      return;
-    }
-
-    // velocidad objetivo
-    let topSpeed = BASE_TOP_SPEED * stats.topSpeed * (offroad ? OFFROAD_FACTOR : 1);
+    // ── velocidad ──
+    const offroad = tr.offroadFactor(this.s, this.q);
+    let topSpeed = BASE_TOP_SPEED * stats.topSpeed * offroad;
     if (this.boostT > 0) {
       this.boostT -= dt;
-      topSpeed *= 1.45 * this.boostPower;
+      topSpeed *= 1.42 * this.boostPower;
     }
-
-    // aceleración / freno
     if (controls.accel) {
-      this.v += BASE_ACCEL * stats.accel * dt * (this.v > topSpeed ? -0.5 : 1);
+      this.v += BASE_ACCEL * stats.accel * dt;
     } else if (controls.brake) {
       this.v -= BRAKE * dt;
     } else {
       this.v -= Math.sign(this.v) * FRICTION * dt;
       if (Math.abs(this.v) < FRICTION * dt) this.v = 0;
     }
-    this.v = THREE.MathUtils.clamp(this.v, -topSpeed * 0.35, Math.max(topSpeed, this.v - 25 * dt));
+    // límite suave: por encima de topSpeed decae, nunca se corta de golpe
+    if (this.v > topSpeed) this.v = Math.max(topSpeed, this.v - 38 * dt);
+    if (this.v < -topSpeed * 0.35) this.v = -topSpeed * 0.35;
 
-    // dirección
-    let steer = (controls.left ? -1 : 0) + (controls.right ? 1 : 0);
+    // ── dirección (modelo arcade estable) ──
+    let steerInput = (controls.left ? -1 : 0) + (controls.right ? 1 : 0);
 
-    // derrape: giro más cerrado y carga de miniturbo
-    if (controls.drift && Math.abs(this.v) > 14 && steer !== 0) {
-      if (this.driftDir === 0) this.driftDir = steer;
-      this.driftCharge = Math.min(this.driftCharge + dt, 1.6);
-      steer = this.driftDir * 1.45 + steer * 0.35;
+    // derrape: mantiene un sesgo de giro y carga miniturbo
+    if (controls.drift && Math.abs(this.v) > 13 && (steerInput !== 0 || this.driftDir !== 0)) {
+      if (this.driftDir === 0 && steerInput !== 0) this.driftDir = steerInput;
+      if (this.driftDir !== 0) {
+        this.driftCharge = Math.min(this.driftCharge + dt, 1.6);
+        steerInput = this.driftDir * 1.15 + steerInput * 0.45;
+        this.fx.drift = this.driftCharge > 0.15;
+      }
     } else {
-      if (this.driftDir !== 0 && this.driftCharge > 0.7) {
-        // miniturbo al soltar
-        this.boostT = Math.max(this.boostT, 0.65 + this.driftCharge * 0.4);
-        this.boostPower = 0.85;
+      if (this.driftDir !== 0 && this.driftCharge > 0.6) {
+        this.boostT = Math.max(this.boostT, 0.55 + this.driftCharge * 0.45);
+        this.boostPower = Math.max(this.boostPower, 0.9);
+        this.fx.miniturbo = true;
       }
       this.driftDir = 0;
       this.driftCharge = 0;
     }
 
-    // asistencia geodésica: empuja suavemente hacia la línea ideal (q≈0)
+    // asistencia geodésica: lleva suavemente hacia la línea ideal
     if (this.assistT > 0) {
       this.assistT -= dt;
-      const ideal = -this.q * 0.04 - this.heading * 0.8;
-      steer += THREE.MathUtils.clamp(ideal, -0.5, 0.5);
+      steerInput += THREE.MathUtils.clamp(-this.q * 0.05 - this.heading * 1.2, -0.6, 0.6);
     }
 
-    const speedFactor = 1 / (1 + Math.abs(this.v) * 0.025);
-    const turn = TURN_RATE * stats.handling * (this.driftDir !== 0 ? stats.drift : 1);
-    this.heading += steer * turn * speedFactor * dt * Math.sign(this.v || 1);
+    // volante suavizado → heading con auto-centrado fuerte
+    this.steerS += (THREE.MathUtils.clamp(steerInput, -1.6, 1.6) - this.steerS) * Math.min(1, 10 * dt);
+    const speedK = THREE.MathUtils.clamp(Math.abs(this.v) / 12, 0.15, 1) // casi no gira parado
+      / (1 + Math.abs(this.v) * 0.013);                                  // y menos a tope
+    const driftBonus = this.driftDir !== 0 ? stats.drift : 1;
+    this.heading += this.steerS * TURN_RATE * stats.handling * driftBonus * speedK * dt * Math.sign(this.v || 1);
+    this.heading -= this.heading * Math.min(1, CENTER_RATE * dt); // la pista "endereza" el kart
+    this.heading = THREE.MathUtils.clamp(this.heading, -MAX_HEADING, MAX_HEADING);
 
-    // acoplamiento con la curvatura de la pista
-    const kappa = this.signedCurvature(this.s);
-    const metric = THREE.MathUtils.clamp(1 - this.q * kappa, 0.35, 2.5);
-    this.heading -= (kappa * this.v * Math.cos(this.heading) / metric) * dt;
-    this.heading = THREE.MathUtils.clamp(this.heading, -1.35, 1.35);
-    // amortiguación leve para que el kart tienda a estabilizarse
-    this.heading *= Math.exp(-0.45 * dt);
-
-    // integración en coordenadas de carretera
+    // ── integración sobre la superficie ──
+    const metric = tr.metricAt(this.s, this.q);
     const prevS = this.s;
     this.s += (this.v * Math.cos(this.heading) / metric) * dt;
-    this.q += this.v * Math.sin(this.heading) * dt;
-    this.q = THREE.MathUtils.clamp(this.q, -w - 4, w + 4);
+    let dq = this.v * Math.sin(this.heading) * dt;
+    if (this.driftDir !== 0) dq += this.driftDir * Math.abs(this.v) * 0.16 * dt; // deslizamiento
+    this.q += dq;
+    this.qTotal += dq;
 
-    // cruces de meta (wrap)
+    if (tr.lateralPeriod) {
+      // superficie cerrada: q envuelve (toro: alrededor del tubo)
+      const P = tr.lateralPeriod;
+      if (this.q > P / 2) this.q -= P;
+      if (this.q < -P / 2) this.q += P;
+      if (tr.kind === 'sphere') {
+        // suave empuje hacia la banda antes del "polo lateral"
+        const lim = P * 0.21;
+        if (Math.abs(this.q) > lim) {
+          this.q -= Math.sign(this.q) * (Math.abs(this.q) - lim) * Math.min(1, 3 * dt);
+          this.heading -= Math.sign(this.q) * 0.5 * dt;
+        }
+      }
+    } else {
+      // cinta: barrera en el borde, con chispas (nunca se atraviesa el suelo)
+      const lim = tr.widthAt(this.s) - 1.0;
+      if (Math.abs(this.q) > lim) {
+        this.q = Math.sign(this.q) * lim;
+        if (Math.abs(this.v) > 8) {
+          this.fx.edge = true;
+          this.v *= 1 - 1.6 * dt;
+        }
+        // rebote suave hacia dentro
+        if (Math.sign(this.heading) === Math.sign(this.q)) this.heading *= 1 - Math.min(1, 8 * dt);
+      }
+    }
+
+    // cruces de meta
     const L = tr.length;
     const wrapBefore = Math.floor(prevS / L);
     const wrapAfter = Math.floor(this.s / L);
@@ -210,21 +210,20 @@ export class Kart {
     }
 
     this._wheelSpin += this.v * dt * 1.6;
-    this._steerVis = THREE.MathUtils.lerp(this._steerVis, steer, 1 - Math.exp(-8 * dt));
-    this.syncVisual(steer, dt);
+    this._steerVis += (this.steerS - this._steerVis) * Math.min(1, 9 * dt);
+    this.syncVisual(dt);
   }
 
   _respawn() {
-    const L = this.track.length;
-    // reaparece en el centro de la pista, un poco atrás
-    this.s = this.s - 4;
     this.q = 0;
     this.heading = 0;
+    this.steerS = 0;
     this.v = 0;
     this.fallT = 0;
+    this.spinT = 0;
   }
 
-  forceRespawn() { if (this.fallT <= 0) { this.fallT = 0.001; } }
+  forceRespawn() { if (this.fallT <= 0) this.fallT = 0.6; }
 
   hit(spinTime = 1.0) {
     if (this.shielded) {
@@ -233,25 +232,19 @@ export class Kart {
       this.onShieldBreak?.();
       return false;
     }
-    this.spinT = Math.max(this.spinT, spinTime);
+    if (spinTime > 0) this.spinT = Math.max(this.spinT, spinTime);
     return true;
   }
 
-  syncVisual(steer, dt) {
+  syncVisual(dt) {
     const tr = this.track;
-    const fr = tr.frameAt(this.s, this.flip, this._frame);
+    const fr = tr.surfaceFrame(this.s, this.q, this.flip, this._frame);
 
-    const hover = 0.55 + 0.06 * Math.sin(performance.now() * 0.004 + this.s);
-    let drop = 0;
-    if (this.fallT > 0) {
-      const t = 1.15 - this.fallT;
-      drop = -t * t * 30;
-    }
+    const hover = 0.52 + 0.05 * Math.sin(performance.now() * 0.004 + this.s);
+    let sink = 0;
+    if (this.fallT > 0) sink = Math.sin((0.6 - this.fallT) * 5.2) * 1.2; // pequeño "hundido" de respawn
 
-    const pos = this.root.position;
-    pos.copy(fr.pos)
-      .addScaledVector(fr.B, this.q)
-      .addScaledVector(fr.N, hover + drop);
+    this.root.position.copy(fr.pos).addScaledVector(fr.N, hover - sink);
 
     // base ortonormal: forward = T rotado heading alrededor de N
     const cos = Math.cos(this.heading), sin = Math.sin(this.heading);
@@ -263,41 +256,46 @@ export class Kart {
     const up = this._up ??= new THREE.Vector3();
     up.copy(fr.N);
     const right = this._right ??= new THREE.Vector3();
-    right.crossVectors(up, fwd).negate(); // x = -(up × fwd) para base RH con z=fwd
+    right.crossVectors(up, fwd).negate();
 
     const m = this._mat ??= new THREE.Matrix4();
     m.makeBasis(right, up, fwd);
     const targetQ = this._tq ??= new THREE.Quaternion();
     targetQ.setFromRotationMatrix(m);
 
-    // inclinación al girar + giro de trompo si te han dado
+    // derrape: el kart se pone "de lado" visualmente
+    if (this.driftDir !== 0) {
+      const yawQ = this._yq ??= new THREE.Quaternion();
+      yawQ.setFromAxisAngle(up, -this.driftDir * 0.35);
+      targetQ.premultiply(yawQ);
+    }
+    // inclinación al girar
     const rollQ = this._rq ??= new THREE.Quaternion();
-    rollQ.setFromAxisAngle(fwd, -this._steerVis * 0.12 * Math.min(1, Math.abs(this.v) / 20));
+    rollQ.setFromAxisAngle(fwd, -this._steerVis * 0.14 * Math.min(1, Math.abs(this.v) / 22));
     targetQ.premultiply(rollQ);
+    // trompo tras un golpe
     if (this.spinT > 0) {
       const spinQ = this._sq ??= new THREE.Quaternion();
-      spinQ.setFromAxisAngle(up, this.spinT * 12);
+      spinQ.setFromAxisAngle(up, this.spinT * 11);
       targetQ.premultiply(spinQ);
     }
 
-    if (dt > 0) this.root.quaternion.slerp(targetQ, 1 - Math.exp(-14 * dt));
+    if (dt > 0) this.root.quaternion.slerp(targetQ, Math.min(1, 16 * dt));
     else this.root.quaternion.copy(targetQ);
 
-    // ruedas
     for (const [i, wheel] of this.visual.wheels.entries()) {
       wheel.rotation.x = this._wheelSpin;
-      if (i < 2) wheel.rotation.y = this._steerVis * 0.4; // delanteras
+      if (i < 2) wheel.rotation.y = this._steerVis * 0.42;
     }
-    // piloto: pequeño rebote y giro de cabeza al derrapar
-    this.visual.pilot.rotation.z = -this._steerVis * 0.15;
+    this.visual.pilot.rotation.z = -this._steerVis * 0.16;
     this.visual.pilot.position.y = 1.5 + 0.05 * Math.sin(performance.now() * 0.008);
 
-    // llama de turbo
     this.visual.flame.visible = this.boostT > 0;
     if (this.visual.flame.visible) {
       this.visual.flame.scale.setScalar(0.8 + 0.4 * Math.random());
+      this.visual.flame.material.color.setHSL(0.52 - Math.random() * 0.07, 1, 0.6);
     }
     this.visual.shield.visible = this.shielded;
-    if (this.shielded) this.visual.shield.rotation.y += dt * 2;
+    if (this.shielded && dt > 0) this.visual.shield.rotation.y += dt * 2;
   }
 }

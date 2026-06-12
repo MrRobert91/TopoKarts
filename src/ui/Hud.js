@@ -41,6 +41,8 @@ export class Hud {
       <div class="edu-toast"></div>
       <div class="center-msg"></div>
       <div class="wrong-way">¡SENTIDO CONTRARIO!</div>
+      <div class="boost-fx"></div>
+      <div class="vignette"></div>
     `;
     this.root.appendChild(el);
     const q = (sel) => el.querySelector(sel);
@@ -52,6 +54,7 @@ export class Hud {
       minimap: q('.minimap'), mctx: q('.minimap').getContext('2d'),
       orientBadge: q('.orient-badge'),
       toastEl: q('.edu-toast'), toastT: 0,
+      boostFx: q('.boost-fx'),
       centerEl: q('.center-msg'),
       wrongEl: q('.wrong-way'), wrongT: 0,
       flashEl: null,
@@ -137,13 +140,20 @@ export class Hud {
       p.lapN.textContent = Math.min(race.laps, kart.lap + 1);
       p.speedN.textContent = Math.round(Math.abs(kart.v) * 3.6);
 
-      // indicador de curvatura local
-      const k = Math.abs(kart.signedCurvature(kart.s));
-      const label = this.def.id === 'hyper' ? '🜍 negativa (silla)'
-        : k > 0.012 ? '● positiva (esfera)'
-        : k > 0.004 ? '▬ media'
-        : '▭ ~plana';
+      // indicador de curvatura local (gaussiana real en superficies)
+      let label;
+      if (this.def.id === 'hyper') label = '🜍 negativa (silla)';
+      else if (this.track.isSurface) {
+        const K = this.track.gaussianAt(kart.s, kart.q);
+        label = K > 1e-5 ? '● positiva (esfera)' : K < -1e-5 ? '🜍 negativa (silla)' : '▭ ~plana';
+      } else {
+        const k = Math.abs(kart.signedCurvature(kart.s));
+        label = k > 0.012 ? '● positiva' : k > 0.004 ? '▬ media' : '▭ ~plana';
+      }
       p.curvInd.textContent = 'curvatura: ' + label;
+
+      // viñeta de turbo
+      p.boostFx.classList.toggle('on', kart.boostT > 0);
 
       // orientación
       const flipped = kart.orientationFlipped;

@@ -72,12 +72,42 @@ export function drawTopoFrame(g, type, W, H, { highlight = false } = {}) {
     g.beginPath(); g.moveTo(rx + size, ry); g.lineTo(rx + size, ry + size); g.stroke();
     arrow(g, rx, cy, Math.PI / 2, 6, edge2);
     arrow(g, rx + size, cy, Math.PI / 2, 6, edge2);
-    // (a, q01) -> coords del cuadrado: x = ciclo A, y = ciclo B (la pista da 2 vueltas al tubo)
-    return (a) => {
-      const phi = 2 * a + 0.9 * Math.sin(a);
+    // etiquetas de los ciclos
+    g.fillStyle = edge; g.font = '700 11px "Space Grotesk"'; g.textAlign = 'center';
+    g.fillText('ciclo A →', cx, ry - 5);
+    g.save(); g.translate(rx - 6, cy); g.rotate(-Math.PI / 2); g.fillStyle = edge2; g.fillText('ciclo B →', 0, 0); g.restore();
+    // (a, q01): x = vuelta al agujero (ciclo A), y = posición real en el tubo (ciclo B)
+    return (a, q01 = 0.5) => {
       const u = (a / TAU) % 1;
-      const v = ((phi / TAU) % 1 + 1) % 1;
-      return [rx + u * size, ry + (1 - v) * size];
+      return [rx + u * size, ry + (1 - q01) * size];
+    };
+  }
+
+  if (type === 'sphere') {
+    const R = Math.min(w, h) / 2 - 4;
+    // esfera vista de perfil: el círculo máximo de carrera es el contorno
+    g.strokeStyle = 'rgba(255,255,255,0.45)';
+    g.lineWidth = 2;
+    g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+    // ecuador lateral (elipse en perspectiva)
+    g.strokeStyle = 'rgba(255,255,255,0.22)';
+    g.beginPath(); g.ellipse(cx, cy, R, R * 0.32, 0, 0, TAU); g.stroke();
+    // círculo máximo de carrera resaltado
+    g.strokeStyle = edge;
+    g.lineWidth = highlight ? 4 : 2.5;
+    g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+    // polos
+    for (const [sy, label] of [[-1, 'N'], [1, 'S']]) {
+      g.fillStyle = edge2;
+      g.beginPath(); g.arc(cx, cy + sy * R, 4, 0, TAU); g.fill();
+      g.font = '700 11px "Space Grotesk"'; g.textAlign = 'center';
+      g.fillText(label, cx + 12, cy + sy * (R - 2) + 4);
+    }
+    arrow(g, cx + R, cy, -Math.PI / 2, 6, edge);
+    // (a, q01): a=0 en el polo N, recorre el círculo; q desplaza el radio
+    return (a, q01 = 0.5) => {
+      const rr = R * (1 - Math.abs(q01 - 0.5) * 0.8);
+      return [cx + rr * Math.sin(a), cy - rr * Math.cos(a)];
     };
   }
 

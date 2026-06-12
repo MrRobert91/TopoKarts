@@ -25,7 +25,7 @@ export class BotController {
   update(dt, race) {
     const kart = this.kart;
     const tr = kart.track;
-    const w = tr.widthAt(kart.s);
+    const w = tr.isSurface ? tr.bandHalf : tr.widthAt(kart.s);
 
     this.repathT -= dt;
     if (this.repathT <= 0) {
@@ -35,6 +35,10 @@ export class BotController {
       const cut = THREE.MathUtils.clamp(kAhead * 220, -1, 1);
       this.targetQ = cut * w * 0.55 * this.cfg.skill
         + Math.sin(this.wander + kart.s * 0.013) * w * 0.25 * (1 - this.cfg.skill);
+      // en el toro, los bots buenos a veces se meten por dentro del tubo (ciclo B)
+      if (tr.kind === 'torus' && this.cfg.skill > 0.7 && Math.sin(this.wander * 3 + kart.s * 0.004) > 0.86) {
+        this.targetQ = tr.lateralPeriod / 2 * Math.sign(Math.sin(this.wander));
+      }
     }
 
     // dirección hacia targetQ

@@ -130,21 +130,20 @@ function eduSummaryFor(def, standings, eduStats) {
   const lines = [];
   for (const [i, st] of eduStats.entries()) {
     const tag = eduStats.length > 1 ? `J${i + 1}: ` : '';
-    if (def.id === 'mobius') {
+    if (def.id === 'sphere') {
+      lines.push(tag + 'Recorriste un círculo máximo: en curvatura positiva, ir recto siempre te devuelve al punto de partida (χ = 2).');
+    } else if (def.id === 'mobius') {
       lines.push(tag + (st.flippedFinish
         ? '✔ Reto: cruzaste la meta con la orientación invertida. La banda solo tiene una cara.'
         : 'Diste la vuelta a una superficie de una sola cara: cada cruce de meta invierte tu orientación.'));
     } else if (def.id === 'torus') {
-      lines.push(tag + 'Completaste ciclos no triviales: una vuelta al agujero y dos al tubo por cada cruce de meta.');
+      lines.push(tag + (st.cyclesB > 0
+        ? `✔ Reto: rodeaste el tubo ${st.cyclesB} vez/veces (ciclo B) además del agujero (ciclo A): π₁(T²) = ℤ×ℤ.`
+        : 'Completaste el ciclo A (alrededor del agujero). El ciclo B (alrededor del tubo) quedó pendiente: son vueltas distintas.'));
     } else if (def.id === 'double') {
       lines.push(tag + 'Rodeaste los dos agujeros: caminos que encierran agujeros distintos no son deformables entre sí.');
     } else if (def.id === 'hyper') {
       lines.push(tag + 'En curvatura negativa el espacio “se abre”: las geodésicas que parecían curvas eran el camino corto.');
-    } else if (def.id === 'poincare') {
-      const n = st.portals.size;
-      lines.push(tag + (n >= 3
-        ? `✔ Reto: atravesaste ${n} caras identificadas. Universo finito, sin borde.`
-        : `Atravesaste ${n} cara(s) identificada(s) de 3. Nunca saliste del universo: no tiene exterior.`));
     }
   }
   return lines.join('<br>');

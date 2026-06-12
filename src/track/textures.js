@@ -165,6 +165,117 @@ export function poincareDiscTexture() {
   return tex;
 }
 
+/**
+ * Textura para una superficie completa (esfera/toro): rejilla de
+ * coordenadas, banda de carrera resaltada, línea central y fórmulas
+ * de la figura pintadas como tiza.
+ */
+export function surfaceTexture(theme, { bandFrac = 0.12, formulas = [], vMin = 0, vMax = 1 } = {}) {
+  const W = 2048, H = 1024;
+  const c = canvas(W, H);
+  const g = c.getContext('2d');
+
+  g.fillStyle = css(theme.road);
+  g.fillRect(0, 0, W, H);
+
+  // mapeo v (0..1 de la textura puede cubrir solo parte del período)
+  const vToY = (v) => H * (1 - (v - vMin) / (vMax - vMin));
+  const bandTop = vToY(0.5 + bandFrac), bandBot = vToY(0.5 - bandFrac);
+
+  // banda de carrera
+  g.fillStyle = css(theme.band ?? theme.edge);
+  g.globalAlpha = 0.30;
+  g.fillRect(0, Math.min(bandTop, bandBot), W, Math.abs(bandBot - bandTop));
+  g.globalAlpha = 1;
+
+  // rejilla de coordenadas
+  g.strokeStyle = 'rgba(70,80,150,0.20)';
+  g.lineWidth = 2;
+  for (let x = 0; x <= W; x += W / 48) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  for (let y = 0; y <= H; y += H / 24) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+
+  // bordes de la banda
+  for (const [y, col] of [[bandTop, theme.edge], [bandBot, theme.edge2]]) {
+    g.strokeStyle = css(col);
+    g.lineWidth = 7;
+    g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke();
+  }
+
+  // línea central discontinua
+  const midY = vToY(0.5);
+  g.strokeStyle = css(theme.roadLine);
+  g.lineWidth = 6;
+  g.setLineDash([46, 30]);
+  g.beginPath(); g.moveTo(0, midY); g.lineTo(W, midY); g.stroke();
+  g.setLineDash([]);
+
+  // flechas de sentido sobre la banda
+  g.fillStyle = 'rgba(60,70,140,0.4)';
+  for (let x = W / 16; x < W; x += W / 8) {
+    g.beginPath();
+    g.moveTo(x + 26, midY);
+    g.lineTo(x, midY - 14);
+    g.lineTo(x + 8, midY);
+    g.lineTo(x, midY + 14);
+    g.closePath(); g.fill();
+  }
+
+  // fórmulas de tiza fuera de la banda
+  g.font = 'italic 600 44px "Space Grotesk", monospace';
+  g.fillStyle = 'rgba(60,70,150,0.5)';
+  for (const [i, f] of formulas.entries()) {
+    const x = ((i * 0.27 + 0.07) % 1) * W;
+    const above = i % 2 === 0;
+    const y = above ? Math.min(bandTop, bandBot) - 60 - (i % 3) * 90 : Math.max(bandTop, bandBot) + 90 + (i % 3) * 90;
+    g.save();
+    g.translate(x, Math.max(50, Math.min(H - 30, y)));
+    g.rotate((i % 2 ? 1 : -1) * 0.04);
+    g.fillText(f, 0, 0);
+    g.restore();
+  }
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.anisotropy = 8;
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/** fórmula flotante luminosa */
+export function formulaSprite(text, color = '#9fd0ff') {
+  const c = canvas(1024, 192);
+  const g = c.getContext('2d');
+  g.font = 'italic 600 84px "Space Grotesk", monospace';
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.shadowColor = color;
+  g.shadowBlur = 26;
+  g.fillStyle = color;
+  g.globalAlpha = 0.92;
+  g.fillText(text, 512, 100);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: tex, transparent: true, depthWrite: false, opacity: 0.85,
+  }));
+  sp.scale.set(36, 6.75, 1);
+  return sp;
+}
+
+/** brillo radial para halos/nebulosas */
+export function glowTexture(colorCss = '#ffffff') {
+  const c = canvas(256, 256);
+  const g = c.getContext('2d');
+  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grd.addColorStop(0, colorCss);
+  grd.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = grd;
+  g.fillRect(0, 0, 256, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 /** cartel de texto flotante */
 export function textSprite(text, { color = '#ffffff', bg = 'rgba(20,22,50,0.85)', size = 56 } = {}) {
   const c = canvas(512, 128);
