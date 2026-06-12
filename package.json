@@ -1,0 +1,23 @@
+{
+  "name": "topokarts",
+  "version": "0.1.0",
+  "description": "TopoKarts: Copa de las Superficies Imposibles — kart racer 3D sobre superficies topológicas",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MrRobert91/TopoKarts.git"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.1.0",
+    "vite": "^8.0.16"
+  }
+}
