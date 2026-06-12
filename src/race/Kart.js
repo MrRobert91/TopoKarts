@@ -89,6 +89,11 @@ export class Kart {
 
     if (this.fallT > 0) {
       this.fallT -= dt;
+      if (this.fallingOff) {
+        // sigue la inercia mientras cae al vacío
+        this.s += this.v * 0.4 * Math.cos(this.heading) * dt;
+        this.q += Math.sign(this.q || 1) * 7 * dt;
+      }
       if (this.fallT <= 0) this._respawn();
       this.syncVisual(dt);
       return;
@@ -184,16 +189,23 @@ export class Kart {
         }
       }
     } else {
-      // cinta: barrera en el borde, con chispas (nunca se atraviesa el suelo)
-      const lim = tr.widthAt(this.s) - 1.0;
+      // cinta: barrera con chispas… salvo en los huecos, donde TE CAES
+      const w = tr.widthAt(this.s);
+      const lim = w - 1.0;
       if (Math.abs(this.q) > lim) {
-        this.q = Math.sign(this.q) * lim;
-        if (Math.abs(this.v) > 8) {
-          this.fx.edge = true;
-          this.v *= 1 - 1.6 * dt;
+        const side = Math.sign(this.q);
+        if (tr.hasBarrier(this.s, side)) {
+          this.q = side * lim;
+          if (Math.abs(this.v) > 8) {
+            this.fx.edge = true;
+            this.v *= 1 - 1.6 * dt;
+          }
+          if (Math.sign(this.heading) === side) this.heading *= 1 - Math.min(1, 8 * dt);
+        } else if (Math.abs(this.q) > w + 2.0) {
+          this.fallingOff = true;
+          this.fallT = 1.35;
+          this.fx.fall = true;
         }
-        // rebote suave hacia dentro
-        if (Math.sign(this.heading) === Math.sign(this.q)) this.heading *= 1 - Math.min(1, 8 * dt);
       }
     }
 
@@ -221,6 +233,7 @@ export class Kart {
     this.v = 0;
     this.fallT = 0;
     this.spinT = 0;
+    this.fallingOff = false;
   }
 
   forceRespawn() { if (this.fallT <= 0) this.fallT = 0.6; }
@@ -242,7 +255,14 @@ export class Kart {
 
     const hover = 0.52 + 0.05 * Math.sin(performance.now() * 0.004 + this.s);
     let sink = 0;
-    if (this.fallT > 0) sink = Math.sin((0.6 - this.fallT) * 5.2) * 1.2; // pequeño "hundido" de respawn
+    if (this.fallT > 0) {
+      if (this.fallingOff) {
+        const t = 1.35 - this.fallT;
+        sink = t * t * 42; // caída al vacío acelerando
+      } else {
+        sink = Math.sin((0.6 - this.fallT) * 5.2) * 1.2; // "hundido" de respawn manual
+      }
+    }
 
     this.root.position.copy(fr.pos).addScaledVector(fr.N, hover - sink);
 
@@ -255,11 +275,14 @@ export class Kart {
       fr.T.z * cos + fr.B.z * sin);
     const up = this._up ??= new THREE.Vector3();
     up.copy(fr.N);
-    const right = this._right ??= new THREE.Vector3();
-    right.crossVectors(up, fwd).negate();
+    // base ORTONORMAL DIRECTA (det +1): x = up × fwd. Con la base reflejada
+    // (det −1) setFromRotationMatrix produce cuaterniones corruptos y el
+    // kart "gira en círculos" según rota el marco de la pista.
+    const xAxis = this._right ??= new THREE.Vector3();
+    xAxis.crossVectors(up, fwd);
 
     const m = this._mat ??= new THREE.Matrix4();
-    m.makeBasis(right, up, fwd);
+    m.makeBasis(xAxis, up, fwd);
     const targetQ = this._tq ??= new THREE.Quaternion();
     targetQ.setFromRotationMatrix(m);
 
@@ -273,6 +296,12 @@ export class Kart {
     const rollQ = this._rq ??= new THREE.Quaternion();
     rollQ.setFromAxisAngle(fwd, -this._steerVis * 0.14 * Math.min(1, Math.abs(this.v) / 22));
     targetQ.premultiply(rollQ);
+    // voltereta al caer al vacío
+    if (this.fallingOff && this.fallT > 0) {
+      const tumQ = this._tumQ ??= new THREE.Quaternion();
+      tumQ.setFromAxisAngle(xAxis, (1.35 - this.fallT) * 2.6);
+      targetQ.premultiply(tumQ);
+    }
     // trompo tras un golpe
     if (this.spinT > 0) {
       const spinQ = this._sq ??= new THREE.Quaternion();

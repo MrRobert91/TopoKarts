@@ -263,6 +263,14 @@ export class Race {
       });
       if (kart.playerIndex !== undefined) this.shake(kart, 0.12);
     }
+    if (kart.fx.fall) {
+      kart.fx.fall = false;
+      this.fx.burst({
+        pos: kart.root.position.clone(), normal: fr.N,
+        count: 10, colors: SPARK_COLORS.hit, speed: 8, life: 0.5, gravity: 18,
+      });
+      if (kart.playerIndex !== undefined) { this.audio?.sfx('fall'); this.shake(kart, 0.7); }
+    }
     if (kart.fx.miniturbo) {
       kart.fx.miniturbo = false;
       this.fx.burst({

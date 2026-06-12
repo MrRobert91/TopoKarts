@@ -67,7 +67,9 @@ export class TrackScene {
   }
 
   _orient(mesh, fr) {
-    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(fr.B, fr.N, fr.T));
+    // base directa (det +1): x = N×T = −B
+    mesh.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(
+      fr.B.clone().negate(), fr.N, fr.T));
   }
 
   // ── cielo ──────────────────────────────────────────────────────────
@@ -273,18 +275,52 @@ export class TrackScene {
       const s = i * step;
       tr.frameAt(s, 0, fr);
       const w = tr.widthAt(s);
+      const negB = fr.B.clone().negate();
       for (const side of [-1, 1]) {
+        if (!tr.hasBarrier(s, side)) continue; // hueco: sin quitamiedos
         const base = fr.pos.clone().addScaledVector(fr.B, side * (w + 1.1)).addScaledVector(fr.N, 0.8);
-        m.makeBasis(fr.B, fr.N, fr.T).setPosition(base);
+        m.makeBasis(negB, fr.N, fr.T).setPosition(base);
         posts.setMatrixAt(iPost++, m);
         const orbPos = base.clone().addScaledVector(fr.N, 1.0);
-        m.makeBasis(fr.B, fr.N, fr.T).setPosition(orbPos);
+        m.makeBasis(negB, fr.N, fr.T).setPosition(orbPos);
         if (side < 0) orbsA.setMatrixAt(iA++, m);
         else orbsB.setMatrixAt(iB++, m);
       }
     }
+    posts.count = iPost;
     orbsA.count = iA; orbsB.count = iB;
     this.group.add(posts, orbsA, orbsB);
+
+    // marcas de peligro a lo largo de los huecos sin barrera
+    const warnMat = new THREE.MeshBasicMaterial({ color: 0xff3b3b, toneMapped: false });
+    const warnGeo = new THREE.PlaneGeometry(1.6, 1.6);
+    for (const g of (tr.def.gaps ?? [])) {
+      for (const side of [-1, 1]) {
+        if (g.side !== 0 && g.side !== side) continue;
+        const s0 = g.s0 * tr.length, s1 = g.s1 * tr.length;
+        for (let s = s0; s <= s1; s += 6) {
+          tr.frameAt(s, 0, fr);
+          const w = tr.widthAt(s);
+          const mark = new THREE.Mesh(warnGeo, warnMat);
+          mark.position.copy(fr.pos)
+            .addScaledVector(fr.B, side * (w - 1.0))
+            .addScaledVector(fr.N, 0.62);
+          mark.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(
+            fr.B.clone().negate(), fr.N, fr.T));
+          mark.rotateX(-Math.PI / 2);
+          mark.rotateZ(Math.PI / 4); // rombo de aviso
+          this.group.add(mark);
+        }
+        // cartel al inicio del hueco
+        tr.frameAt(s0 - 8, 0, fr);
+        const sign = textSprite('⚠ SIN BARRERA', { color: '#ff6b6b' });
+        sign.scale.set(14, 3.5, 1);
+        sign.position.copy(fr.pos)
+          .addScaledVector(fr.B, side * (tr.widthAt(s0) + 4))
+          .addScaledVector(fr.N, 6);
+        this.group.add(sign);
+      }
+    }
   }
 
   _buildFinish() {
@@ -302,7 +338,7 @@ export class TrackScene {
       const m2 = mesh.clone();
       m2.position.copy(f1.pos);
       m2.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(
-        f1.B.clone().negate(), f1.N.clone().negate(), f1.T));
+        f1.B.clone(), f1.N.clone().negate(), f1.T));
       m2.rotateX(-Math.PI / 2);
       this.group.add(m2);
     }
@@ -482,7 +518,7 @@ export class TrackScene {
   _makeSpinner(f, theme) {
     const group = new THREE.Group();
     group.position.copy(f.pos).addScaledVector(f.N, 1.1);
-    group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(f.B, f.N, f.T));
+    group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(f.B.clone().negate(), f.N, f.T));
 
     const hub = new THREE.Mesh(
       new THREE.CylinderGeometry(0.8, 1.0, 1.6, 8),

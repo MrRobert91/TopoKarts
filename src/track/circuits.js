@@ -69,6 +69,7 @@ export const CIRCUITS = [
     boostPads: [{ s: 0.30, q: 0 }, { s: 0.55, q: -4 }, { s: 0.80, q: 4 }],
     rings: [0.2, 0.45, 0.7],
     tunnels: [{ s: 0.58, len: 40 }],
+    gaps: [{ s0: 0.40, s1: 0.50, side: 1 }, { s0: 0.67, s1: 0.75, side: -1 }],
     obstacles: [
       { type: 'spinner', s: 0.25, q: 0 },
       { type: 'cone', s: 0.48, q: -5 }, { type: 'cone', s: 0.49, q: 4 },
@@ -147,6 +148,7 @@ export const CIRCUITS = [
     boostPads: [{ s: 0.18, q: 0 }, { s: 0.43, q: 0 }, { s: 0.68, q: 0 }, { s: 0.93, q: 0 }],
     rings: [0.12, 0.38, 0.62, 0.88],
     tunnels: [{ s: 0.31, len: 36 }, { s: 0.81, len: 36 }],
+    gaps: [{ s0: 0.205, s1: 0.27, side: 1 }, { s0: 0.70, s1: 0.78, side: -1 }],
     obstacles: [
       { type: 'bumper', s: 0.24, q: 0 },
       { type: 'cone', s: 0.5, q: -4 }, { type: 'cone', s: 0.505, q: 4 },
@@ -186,6 +188,7 @@ export const CIRCUITS = [
     boostPads: [{ s: 0.16, q: 0 }, { s: 0.5, q: 0 }, { s: 0.83, q: 0 }],
     rings: [0.1, 0.43, 0.76],
     tunnels: [{ s: 0.6, len: 44 }],
+    gaps: [{ s0: 0.26, s1: 0.33, side: 1 }, { s0: 0.69, s1: 0.76, side: -1 }],
     obstacles: [
       { type: 'spinner', s: 0.21, q: 0 },
       { type: 'cone', s: 0.37, q: -3 }, { type: 'cone', s: 0.38, q: 3 },
