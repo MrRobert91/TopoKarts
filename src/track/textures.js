@@ -52,7 +52,7 @@ export function roadTexture(theme) {
   const g = c.getContext('2d');
 
   // asfalto coloreado del tema, oscurecido para contrastar con el cielo
-  const base = new THREE.Color(theme.road).multiplyScalar(0.8);
+  const base = new THREE.Color(theme.road).multiplyScalar(0.62);
   g.fillStyle = '#' + base.getHexString();
   g.fillRect(0, 0, W, H);
   asphaltNoise(g, W, H, 3400);
@@ -261,7 +261,7 @@ export function surfaceTexture(theme, { bandFrac = 0.12, formulas = [], vMin = 0
   const c = canvas(W, H);
   const g = c.getContext('2d');
 
-  const baseCol = new THREE.Color(theme.road).multiplyScalar(0.72);
+  const baseCol = new THREE.Color(theme.road).multiplyScalar(0.55);
   g.fillStyle = '#' + baseCol.getHexString();
   g.fillRect(0, 0, W, H);
   asphaltNoise(g, W, H, 9000);
@@ -411,13 +411,21 @@ export function plasticTexture(hex) {
   grd.addColorStop(1, 'rgba(0,0,0,0.16)');
   g.fillStyle = grd;
   g.fillRect(0, 0, S, S);
-  // pecas de pigmento
-  for (let i = 0; i < 900; i++) {
+  // pecas de pigmento bien visibles
+  for (let i = 0; i < 1600; i++) {
     const light = Math.random() > 0.5;
     g.fillStyle = light
-      ? `rgba(255,255,255,${0.04 + Math.random() * 0.07})`
-      : `rgba(0,0,0,${0.04 + Math.random() * 0.07})`;
-    g.fillRect(Math.random() * S, Math.random() * S, 1.6, 1.6);
+      ? `rgba(255,255,255,${0.08 + Math.random() * 0.12})`
+      : `rgba(0,0,0,${0.08 + Math.random() * 0.12})`;
+    const sz = 1.4 + Math.random() * 2.2;
+    g.fillRect(Math.random() * S, Math.random() * S, sz, sz);
+  }
+  // costuras de panel (líneas tenues que rompen la superficie lisa)
+  g.strokeStyle = 'rgba(0,0,0,0.14)';
+  g.lineWidth = 2;
+  for (const p of [0.25, 0.5, 0.75]) {
+    g.beginPath(); g.moveTo(S * p, 0); g.lineTo(S * p, S); g.stroke();
+    g.beginPath(); g.moveTo(0, S * p); g.lineTo(S, S * p); g.stroke();
   }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;

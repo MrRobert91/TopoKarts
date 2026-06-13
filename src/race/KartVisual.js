@@ -24,27 +24,29 @@ export function buildKart(character) {
   const accent = new THREE.Color(character.accent ?? 0xffffff);
 
   const tex = sharedTextures();
+  // pintura sólida mate: nada de cromo ni barniz, solo color plano con grano
   const M = {
-    paint: new THREE.MeshPhysicalMaterial({
-      color, clearcoat: 1, clearcoatRoughness: 0.12, roughness: 0.32, metalness: 0.1,
-      bumpMap: tex.paintBump, bumpScale: 0.012, // grano metalizado sutil
+    paint: new THREE.MeshStandardMaterial({
+      map: plasticTexture(character.color), roughness: 0.92, metalness: 0,
+      bumpMap: tex.paintBump, bumpScale: 0.03,
     }),
-    accent: new THREE.MeshPhysicalMaterial({
-      color: accent, clearcoat: 0.8, clearcoatRoughness: 0.2, roughness: 0.4, metalness: 0.1,
-      bumpMap: tex.paintBump, bumpScale: 0.012,
+    accent: new THREE.MeshStandardMaterial({
+      map: plasticTexture(character.accent ?? 0xffffff), roughness: 0.92, metalness: 0,
+      bumpMap: tex.paintBump, bumpScale: 0.03,
     }),
     dark: new THREE.MeshStandardMaterial({
-      map: tex.carbon, roughness: 0.45, metalness: 0.35, // fibra de carbono
+      map: tex.carbon, roughness: 0.95, metalness: 0,
     }),
-    chrome: new THREE.MeshStandardMaterial({ color: 0xd8dce8, roughness: 0.22, metalness: 0.95 }),
+    chrome: new THREE.MeshStandardMaterial({ color: 0x8b90a4, roughness: 0.85, metalness: 0 }),
     tire: new THREE.MeshStandardMaterial({
-      color: 0x17171f, roughness: 0.92, bumpMap: tex.tireBump, bumpScale: 0.05,
+      color: 0x17171f, roughness: 1, bumpMap: tex.tireBump, bumpScale: 0.06,
     }),
-    glass: new THREE.MeshPhysicalMaterial({
-      color: 0x9fd4ff, transparent: true, opacity: 0.4, roughness: 0.06, metalness: 0.1,
+    glass: new THREE.MeshStandardMaterial({
+      color: 0x6fa8d8, transparent: true, opacity: 0.55, roughness: 0.6, metalness: 0,
     }),
-    white: new THREE.MeshStandardMaterial({ color: 0xf4f4f8, roughness: 0.3 }),
+    white: new THREE.MeshStandardMaterial({ color: 0xf4f4f8, roughness: 0.85 }),
   };
+  void color;
 
   // ── carrocería según personaje ──
   const body = new THREE.Group();
@@ -145,7 +147,7 @@ export function buildKart(character) {
   shield.visible = false;
   root.add(shield);
 
-  root.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  root.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return { root, wheels, pilot, flame, shield };
 }
 
@@ -251,10 +253,10 @@ const BODY_BUILDERS = {
 function buildPilot(character, M) {
   const g = new THREE.Group();
   const tex = sharedTextures();
-  const headMat = new THREE.MeshPhysicalMaterial({
+  const headMat = new THREE.MeshStandardMaterial({
     map: plasticTexture(character.color),
-    roughness: 0.35, clearcoat: 0.6, clearcoatRoughness: 0.3,
-    bumpMap: tex.paintBump, bumpScale: 0.02, // plástico de juguete moteado
+    roughness: 0.95, metalness: 0,
+    bumpMap: tex.paintBump, bumpScale: 0.04, // plástico de juguete moteado mate
   });
 
   let head;

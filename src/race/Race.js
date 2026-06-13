@@ -25,10 +25,6 @@ export class Race {
 
     this.scene = new THREE.Scene();
     this.scene.fog = new THREE.FogExp2(circuitDef.theme.fog, circuitDef.theme.fogDensity);
-    if (opts.envMap) {
-      this.scene.environment = opts.envMap;
-      this.scene.environmentIntensity = 0.42;
-    }
 
     this.track = new Track(circuitDef);
     this.trackScene = new TrackScene(this.track);
@@ -53,19 +49,21 @@ export class Race {
 
   _buildLights() {
     const theme = this.def.theme;
-    const sun = new THREE.DirectionalLight(theme.light, 2.05);
+    // sol duro: única fuente principal, sombras nítidas y contraste alto
+    const sun = new THREE.DirectionalLight(theme.light, 2.6);
     sun.position.set(140, 260, 90);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(4096, 4096);
     const sc = sun.shadow.camera;
-    sc.left = -280; sc.right = 280; sc.top = 280; sc.bottom = -280;
-    sc.near = 40; sc.far = 900;
-    sun.shadow.bias = -0.0006;
+    sc.left = -340; sc.right = 340; sc.top = 340; sc.bottom = -340;
+    sc.near = 40; sc.far = 1000;
+    sun.shadow.bias = -0.0005;
     this.scene.add(sun);
+    // ambiente bajo: lo que no recibe sol queda en sombra de verdad
     const ambient = new THREE.Color(theme.ambient);
-    this.scene.add(new THREE.HemisphereLight(ambient, ambient.clone().multiplyScalar(0.5), 1.0));
-    // relleno desde abajo: Möbius y el interior del toro también se conducen
-    const fill = new THREE.DirectionalLight(theme.ambient, 0.9);
+    this.scene.add(new THREE.HemisphereLight(ambient, ambient.clone().multiplyScalar(0.22), 0.42));
+    // relleno tenue desde abajo: Möbius y el interior del toro también se conducen
+    const fill = new THREE.DirectionalLight(theme.ambient, 0.45);
     fill.position.set(-150, -220, -120);
     this.scene.add(fill);
   }
@@ -528,7 +526,7 @@ export class Race {
         this._composerRenderer = renderer;
         this.composer = new EffectComposer(renderer);
         this._renderPass = new RenderPass(this.scene, this.cameras[0]);
-        this._bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.30, 0.5, 0.90);
+        this._bloom = new UnrealBloomPass(new THREE.Vector2(W, H), 0.14, 0.4, 0.95);
         this.composer.addPass(this._renderPass);
         this.composer.addPass(this._bloom);
         this.composer.addPass(new OutputPass());
