@@ -8,6 +8,10 @@ import { addMathDecor } from './mathDecor.js';
 
 const SYMBOLS = ['∞', 'χ', 'π', '⇄', '◯', '⬠', '△'];
 
+// grosor de la losa de carretera (cinta). La superficie por la que se conduce
+// es la cara superior, a ROAD_THICK/2 sobre la línea central a lo largo de N.
+const ROAD_THICK = 3.2;
+
 /**
  * Construye toda la escena visual de un circuito: superficie/carretera,
  * meta, cajas de objetos, turbos, aros, túneles, obstáculos, fórmulas
@@ -21,6 +25,9 @@ export class TrackScene {
     this.itemBoxes = [];
     this.boostPads = [];
     this.obstacles = [];
+    // en cintas (ribbon) la cara de rodadura está elevada media losa sobre la
+    // línea central; las superficies (esfera/toro) no tienen grosor.
+    this.roadLift = track.isSurface ? 0 : ROAD_THICK / 2;
 
     this._buildSky();
     if (track.isSurface) this._buildSurface();
@@ -212,7 +219,7 @@ export class TrackScene {
     const tr = this.track;
     const theme = tr.def.theme;
     const nSeg = Math.max(200, Math.round(tr.length / 1.4));
-    const thick = 3.2; // losa de carretera con grosor real, nada de plano fino
+    const thick = ROAD_THICK; // losa de carretera con grosor real, nada de plano fino
 
     const roadBump = noiseBumpTexture(256, 70);
     roadBump.repeat.set(6, 60);
@@ -488,7 +495,7 @@ export class TrackScene {
       new THREE.MeshBasicMaterial({
         color: 0xe8362e, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false,
       }));
-    ring.position.copy(f.pos).addScaledVector(f.N, 0.15);
+    ring.position.copy(f.pos).addScaledVector(f.N, 0.15 + this.roadLift);
     this._orient(ring, f);
     ring.rotateX(-Math.PI / 2);
     this.group.add(ring);
@@ -498,7 +505,7 @@ export class TrackScene {
 
   _makeSpinner(f, theme) {
     const group = new THREE.Group();
-    group.position.copy(f.pos).addScaledVector(f.N, 1.1);
+    group.position.copy(f.pos).addScaledVector(f.N, 1.1 + this.roadLift);
     group.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(f.B.clone().negate(), f.N, f.T));
     this._dangerRing(f, 5.2);
 
@@ -564,7 +571,7 @@ export class TrackScene {
       spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
       mesh.add(spike);
     }
-    const base = f.pos.clone().addScaledVector(f.N, 2.0);
+    const base = f.pos.clone().addScaledVector(f.N, 2.0 + this.roadLift);
     mesh.position.copy(base);
     this.group.add(mesh);
     const collider = base.clone();
@@ -585,14 +592,14 @@ export class TrackScene {
     const mesh = new THREE.Mesh(
       new THREE.ConeGeometry(1.0, 2.4, 14),
       new THREE.MeshStandardMaterial({ map: coneStripesTexture(), roughness: 0.45 }));
-    mesh.position.copy(f.pos).addScaledVector(f.N, 1.25);
+    mesh.position.copy(f.pos).addScaledVector(f.N, 1.25 + this.roadLift);
     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), f.N);
     mesh.castShadow = true;
     this.group.add(mesh);
     const base = new THREE.Mesh(
       new THREE.CylinderGeometry(1.35, 1.45, 0.16, 14),
       new THREE.MeshStandardMaterial({ color: 0xe8362e, roughness: 0.5 }));
-    base.position.copy(f.pos).addScaledVector(f.N, 0.12);
+    base.position.copy(f.pos).addScaledVector(f.N, 0.12 + this.roadLift);
     base.quaternion.copy(mesh.quaternion);
     this.group.add(base);
     this.obstacles.push({ type: 'cone', radius: 1.5, colliders: [mesh.position.clone()] });

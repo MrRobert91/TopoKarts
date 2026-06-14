@@ -31,10 +31,9 @@ export const CIRCUITS = [
     boostPads: [{ s: 0.27, q: 0 }, { s: 0.52, q: 0 }, { s: 0.77, q: -3 }],
     rings: [0.22, 0.47, 0.72, 0.97],
     obstacles: [
-      { type: 'cone', s: 0.18, q: -4 }, { type: 'cone', s: 0.19, q: 3 },
+      { type: 'cone', s: 0.18, q: -4 },
       { type: 'bumper', s: 0.42, q: 0 },
-      { type: 'cone', s: 0.66, q: 4 }, { type: 'cone', s: 0.67, q: -3 },
-      { type: 'bumper', s: 0.90, q: -4 },
+      { type: 'cone', s: 0.66, q: 4 },
     ],
     toasts: {
       wrap: 'Círculo máximo completado: polo norte → polo sur → polo norte.',
@@ -70,9 +69,9 @@ export const CIRCUITS = [
     rings: [0.2, 0.45, 0.7],
     tunnels: [{ s: 0.58, len: 40 }],
     obstacles: [
-      { type: 'spinner', s: 0.25, q: -7 }, { type: 'spinner', s: 0.255, q: 9 },
-      { type: 'cone', s: 0.48, q: -11 }, { type: 'cone', s: 0.49, q: 8 },
-      { type: 'spinner', s: 0.74, q: 0 }, { type: 'bumper', s: 0.745, q: 13 },
+      { type: 'spinner', s: 0.25, q: -7 },
+      { type: 'cone', s: 0.48, q: 8 },
+      { type: 'spinner', s: 0.74, q: 0 },
     ],
     toasts: { wrap: 'Tu orientación se ha invertido: misma cinta, “otra cara”.' },
     challenge: 'Cruza la meta con la orientación invertida.',
@@ -109,8 +108,7 @@ export const CIRCUITS = [
     rings: [0.15, 0.4, 0.65, 0.9],
     obstacles: [
       { type: 'spinner', s: 0.3, q: 0 },
-      { type: 'bumper', s: 0.5, q: 81 },
-      { type: 'cone', s: 0.62, q: -4 }, { type: 'cone', s: 0.63, q: 4 },
+      { type: 'cone', s: 0.62, q: -4 },
       { type: 'spinner', s: 0.85, q: 0 },
     ],
     toasts: {
@@ -148,10 +146,9 @@ export const CIRCUITS = [
     rings: [0.12, 0.38, 0.62, 0.88],
     tunnels: [{ s: 0.31, len: 36 }, { s: 0.81, len: 36 }],
     obstacles: [
-      { type: 'bumper', s: 0.24, q: -8 }, { type: 'bumper', s: 0.245, q: 8 },
-      { type: 'cone', s: 0.5, q: -8 }, { type: 'cone', s: 0.505, q: 8 },
-      { type: 'bumper', s: 0.74, q: 0 },
-      { type: 'spinner', s: 0.95, q: -6 }, { type: 'spinner', s: 0.955, q: 8 },
+      { type: 'bumper', s: 0.24, q: -8 },
+      { type: 'cone', s: 0.5, q: 8 },
+      { type: 'spinner', s: 0.95, q: -6 },
     ],
     toasts: {
       half: 'Has rodeado el Agujero 1. Ahora toca el Agujero 2: son caminos distintos.',
@@ -187,10 +184,9 @@ export const CIRCUITS = [
     rings: [0.1, 0.43, 0.76],
     tunnels: [{ s: 0.6, len: 44 }],
     obstacles: [
-      { type: 'spinner', s: 0.21, q: -6 }, { type: 'spinner', s: 0.215, q: 8 },
-      { type: 'cone', s: 0.37, q: -7 }, { type: 'cone', s: 0.38, q: 7 },
-      { type: 'bumper', s: 0.55, q: -9 }, { type: 'bumper', s: 0.555, q: 9 },
-      { type: 'cone', s: 0.7, q: 0 },
+      { type: 'spinner', s: 0.21, q: -6 },
+      { type: 'cone', s: 0.37, q: 7 },
+      { type: 'bumper', s: 0.55, q: -9 },
       { type: 'spinner', s: 0.9, q: 0 },
     ],
     toasts: { wrap: 'Las rutas que parecían paralelas se han separado: curvatura negativa.' },
