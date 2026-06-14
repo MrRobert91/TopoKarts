@@ -8,6 +8,11 @@ import { addMathDecor } from './mathDecor.js';
 
 const SYMBOLS = ['∞', 'χ', 'π', '⇄', '◯', '⬠', '△'];
 
+// modo "limpio" para grabar el trailer: sin obstáculos que provoquen trompos.
+// Se activa con ?clean=1 y NO afecta a la partida normal.
+const CLEAN_RUN = typeof location !== 'undefined' &&
+  new URLSearchParams(location.search).get('clean') === '1';
+
 // grosor de la losa de carretera (cinta). La superficie por la que se conduce
 // es la cara superior, a ROAD_THICK/2 sobre la línea central a lo largo de N.
 const ROAD_THICK = 3.2;
@@ -478,6 +483,7 @@ export class TrackScene {
 
   // ── obstáculos geométricos ─────────────────────────────────────────
   _buildObstacles() {
+    if (CLEAN_RUN) return;            // trailer: vueltas limpias sin trompos
     const tr = this.track;
     const theme = tr.def.theme;
     for (const def of (tr.def.obstacles ?? [])) {

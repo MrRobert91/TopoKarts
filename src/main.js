@@ -207,6 +207,8 @@ window.addEventListener('keydown', e => {
       game.hud?.toast(i, `${game.race.def.concept}: ${game.race.def.quote}`, 5);
     }
   }
+  // captura del trailer: provoca un único trompo dramático bajo demanda.
+  if (e.code === 'KeyK') game.race.players?.[0]?.hit(0.85);
 });
 
 // ── bucle principal ──────────────────────────────────────────────────

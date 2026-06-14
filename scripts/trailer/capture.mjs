@@ -58,39 +58,54 @@ async function record(id, url, drive, seconds) {
 }
 
 // rutinas de conducción (devuelven cuando termina la grabación)
-const hold = (keys, ms) => async (page) => {
-  for (const k of keys) await page.keyboard.down(k);
-  await sleep(ms);
-  for (const k of keys) await page.keyboard.up(k);
-};
-async function driveDynamic(page, ms) {
+// Conducción LIMPIA: acelera recto y solo da toques suaves de volante muy
+// espaciados; el auto-centrado de la pista reendereza y NO se sale ni choca.
+// Un único derrape a mitad luce el miniturbo (llama azul).
+async function driveClean(page, ms, { drift = true } = {}) {
   await page.keyboard.down('w');
   const t0 = Date.now();
-  const wig = ['a', 'd', 'a', 'd'];
-  let i = 0;
+  const steers = ['d', 'a', 'a', 'd'];
+  let i = 0, drifted = false;
   while (Date.now() - t0 < ms) {
-    const k = wig[i++ % wig.length];
-    await page.keyboard.down(k); await sleep(420); await page.keyboard.up(k);
-    await sleep(640);
+    const elapsed = Date.now() - t0;
+    if (drift && !drifted && elapsed > ms * 0.42) {
+      drifted = true;
+      await page.keyboard.down('ShiftLeft');
+      await page.keyboard.down('d'); await sleep(600); await page.keyboard.up('d');
+      await page.keyboard.up('ShiftLeft');       // soltar derrape → miniturbo
+      await sleep(820);                          // tramo recto disfrutando el turbo
+      continue;
+    }
+    const k = steers[i++ % steers.length];
+    await page.keyboard.down(k); await sleep(200); await page.keyboard.up(k);
+    await sleep(1150);                           // tramos rectos largos: se queda en pista
   }
   await page.keyboard.up('w');
 }
 
-// ── escenas de gameplay ──────────────────────────────────────────────
-await record('s0_sphere', `${BASE}/?circuit=0`, (p) => driveDynamic(p, 7000), 7);
-await record('s1_mobius', `${BASE}/?circuit=1`, (p) => driveDynamic(p, 7000), 7);
-await record('s2_torus', `${BASE}/?circuit=2`, (p) => driveDynamic(p, 7000), 7);
-await record('s3_double', `${BASE}/?circuit=3`, (p) => driveDynamic(p, 6500), 6.5);
-await record('s4_hyper', `${BASE}/?circuit=4`, (p) => driveDynamic(p, 6500), 6.5);
-await record('s5_split', `${BASE}/?circuit=2&players=2`,
-  async (p) => { await p.keyboard.down('w'); await p.keyboard.down('ArrowUp');
-    await sleep(6000); await p.keyboard.up('w'); await p.keyboard.up('ArrowUp'); }, 6);
-// beat topológico: conduce un poco y cambia el minimapa a modo topológico
-await record('s6_topo', `${BASE}/?circuit=1`, async (p) => {
-  await p.keyboard.down('w'); await sleep(2200);
-  await p.keyboard.press('m'); await sleep(4200);
+// ── escenas de gameplay (todas en modo limpio: sin obstáculos) ───────
+await record('s0_sphere', `${BASE}/?circuit=0&clean=1`, (p) => driveClean(p, 7000), 7);
+await record('s1_mobius', `${BASE}/?circuit=1&clean=1`, (p) => driveClean(p, 7000), 7);
+await record('s2_torus', `${BASE}/?circuit=2&clean=1`, (p) => driveClean(p, 7000), 7);
+await record('s3_double', `${BASE}/?circuit=3&clean=1`, (p) => driveClean(p, 6500), 6.5);
+// ÚNICO choque del trailer: conduce limpio y provoca un trompo dramático con 'k'.
+await record('s4_hyper', `${BASE}/?circuit=4&clean=1`, async (p) => {
+  await p.keyboard.down('w'); await sleep(2700);
+  await p.keyboard.press('k');                  // trompo único (sparks + sacudida)
+  await sleep(1600);                            // se recupera
+  await p.keyboard.down('d'); await sleep(200); await p.keyboard.up('d');
+  await sleep(1700);
   await p.keyboard.up('w');
 }, 6.5);
+await record('s5_split', `${BASE}/?circuit=2&players=2&clean=1`,
+  async (p) => { await p.keyboard.down('w'); await p.keyboard.down('ArrowUp');
+    await sleep(6000); await p.keyboard.up('w'); await p.keyboard.up('ArrowUp'); }, 6);
+// beat topológico (el moat): conduce y cambia el minimapa a modo topológico
+await record('s6_topo', `${BASE}/?circuit=1&clean=1`, async (p) => {
+  await p.keyboard.down('w'); await sleep(1800);
+  await p.keyboard.press('m'); await sleep(4800);   // más tiempo en vista topológica
+  await p.keyboard.up('w');
+}, 6.6);
 // menú animado para el intro
 await record('s7_title', `${BASE}/`, async () => { await sleep(5200); }, 5.2);
 
