@@ -64,6 +64,49 @@ await shotHTML('card_outro', page(`
   </div>`,
   'background:radial-gradient(120% 120% at 50% 100%,#0b1430,#05080f 70%)'), false);
 
+// ── tarjeta GANCHO (hook, opaca) ─────────────────────────────────────
+await shotHTML('card_hook', page(`
+  <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
+     justify-content:center;color:#fff;text-align:center;position:relative">
+    <div style="position:absolute;inset:0;background:
+       radial-gradient(1100px 700px at 50% 35%, rgba(176,63,224,.28), transparent 60%),
+       radial-gradient(900px 600px at 20% 90%, rgba(70,213,255,.22), transparent 60%)"></div>
+    <div style="font-size:30px;letter-spacing:8px;color:#b03fe0;font-weight:800;
+       text-transform:uppercase;margin-bottom:22px;z-index:1">¿Y si el circuito no fuera plano?</div>
+    <div style="font-size:128px;font-weight:900;line-height:.96;z-index:1;letter-spacing:-1px;
+       background:linear-gradient(180deg,#fff,#cfe6ff);-webkit-background-clip:text;color:transparent;
+       filter:drop-shadow(0 10px 40px rgba(176,63,224,.4))">CONDUCE SOBRE<br>LO IMPOSIBLE</div>
+    <div style="font-size:30px;color:#c9d6ff;margin-top:30px;letter-spacing:1px;z-index:1;font-weight:600">
+       Esferas · cintas de Möbius · toros · planos hiperbólicos</div>
+  </div>`,
+  'background:radial-gradient(120% 120% at 50% 10%,#1a1040,#06070f 70%)'), false);
+
+// ── tarjeta CARACTERÍSTICAS (features, opaca) ────────────────────────
+const feat = (icon, title, sub, accent) => `
+  <div style="display:flex;align-items:center;gap:22px;padding:22px 30px;border-radius:18px;
+     background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);width:760px">
+    <div style="font-size:52px;width:64px;text-align:center;filter:drop-shadow(0 4px 12px ${accent}88)">${icon}</div>
+    <div style="text-align:left">
+      <div style="font-size:34px;font-weight:900;color:#fff;line-height:1.05">${title}</div>
+      <div style="font-size:23px;font-weight:600;color:#aebbe0;margin-top:5px">${sub}</div>
+    </div>
+  </div>`;
+await shotHTML('card_features', page(`
+  <div style="width:100%;height:100%;display:flex;flex-direction:column;align-items:center;
+     justify-content:center;color:#fff;position:relative;gap:18px">
+    <div style="position:absolute;inset:0;background:
+       radial-gradient(1100px 700px at 50% 0%, rgba(70,213,255,.16), transparent 60%)"></div>
+    <div style="font-size:28px;letter-spacing:10px;color:#46d5ff;font-weight:800;
+       text-transform:uppercase;z-index:1;margin-bottom:6px">Todo procedural · 100% navegador</div>
+    <div style="z-index:1;display:flex;flex-direction:column;gap:16px">
+      ${feat('🌀', '5 circuitos topológicos', 'Cada superficie cambia cómo se conduce', '#46d5ff')}
+      ${feat('🎮', '1–2 jugadores locales', 'Pantalla partida automática', '#ffd23f')}
+      ${feat('🏎️', 'Derrapes con miniturbo', 'Y 5 objetos matemáticos para sabotear al rival', '#ff5d8f')}
+      ${feat('🗺️', 'Minimapa topológico', 'Lee la pista como lo que de verdad es', '#b03fe0')}
+    </div>
+  </div>`,
+  'background:radial-gradient(120% 120% at 50% 0%,#0d1838,#05070f 70%)'), false);
+
 const LT = [
   ['s0_sphere', '01', 'Sphere Speedway', 'Curvatura positiva', 'K = 1/R² > 0  ·  χ(S²) = 2', '#46d5ff'],
   ['s1_mobius', '02', 'Möbius Motorway', 'No orientabilidad', 'Una sola cara · cada vuelta te invierte', '#ff5d8f'],

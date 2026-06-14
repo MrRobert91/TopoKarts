@@ -1,6 +1,7 @@
 // Monta el trailer final con ffmpeg a partir de trailer/raw:
 //  - normaliza cada escena a 1920x1080 @30fps y superpone su lower-third con fundido
-//  - encadena todas las escenas con crossfades (xfade)
+//  - construye un MONTAJE FINAL de cortes rápidos (todos los circuitos, acelerados)
+//  - encadena todo con crossfades (xfade) hacia ~60s
 //  - genera la música a la duración exacta y la mezcla
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -22,17 +23,57 @@ const FPS = 30, T = 0.45; // crossfade
 const ff = (args) => execFileSync(ffmpegPath, ['-y', '-hide_banner', '-loglevel', 'error', ...args],
   { stdio: ['ignore', 'inherit', 'inherit'] });
 
+// ── MONTAJE FINAL: cortes rápidos y acelerados de varios circuitos ───
+// Da el subidón de "quiero jugar ya" justo antes del cierre.
+function buildMontage(totalDur) {
+  const segs = [
+    ['s2_torus', 0.42], ['s4_hyper', 0.45], ['s0_sphere', 0.40],
+    ['s1_mobius', 0.42], ['s3_double', 0.45], ['s6_topo', 0.40],
+  ];
+  const SPEED = 1.45;                       // aceleración para energía
+  const piece = totalDur / segs.length;     // duración de cada corte en pantalla
+  const list = [];
+  segs.forEach(([id, frac], i) => {
+    const fps = fpsOf(id);
+    const srcSec = +(piece * SPEED).toFixed(3);             // metraje fuente a consumir
+    const need = Math.ceil(srcSec * fps) + 2;
+    let start = Math.floor(framesOf(id) * frac);
+    start = Math.max(0, Math.min(start, framesOf(id) - need));
+    const glob = path.join(RAW, id, '%05d.jpg');
+    const out = path.join(TMP, `m_${i}.mp4`);
+    const filter =
+      `[0:v]fps=${fps},scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,` +
+      `trim=0:${srcSec},setpts=(PTS-STARTPTS)/${SPEED},fps=${FPS},format=yuv420p[v]`;
+    ff(['-framerate', String(fps), '-start_number', String(start), '-i', glob,
+      '-filter_complex', filter, '-map', '[v]', '-t', piece.toFixed(3),
+      '-r', String(FPS), '-c:v', 'libx264', '-preset', 'medium', '-crf', '18', '-an', out]);
+    list.push(out);
+  });
+  // concat por demuxer (cortes secos)
+  const lst = path.join(TMP, 'montage_list.txt');
+  fs.writeFileSync(lst, list.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n'));
+  const montage = path.join(TMP, 'montage_src.mp4');
+  ff(['-f', 'concat', '-safe', '0', '-i', lst, '-c', 'copy', montage]);
+  return montage;
+}
+
+const montageDur = 5.0;
+const montageSrc = buildMontage(montageDur);
+
 // secuencia: [id, tipo, duración deseada, overlayPNG|null, opciones]
 const seq = [
-  ['card_title', 'card', 5.0, null, { fadeFromBlack: true }],
-  ['s0_sphere', 'play', 6.6, 'lt_s0_sphere'],
-  ['s1_mobius', 'play', 6.6, 'lt_s1_mobius'],
-  ['s2_torus', 'play', 6.6, 'lt_s2_torus'],
-  ['s3_double', 'play', 6.0, 'lt_s3_double'],
-  ['s4_hyper', 'play', 6.0, 'lt_s4_hyper'],
-  ['s5_split', 'play', 6.0, 'lt_split'],
-  ['s6_topo', 'play', 6.2, 'lt_topo'],
-  ['card_outro', 'card', 5.5, null, { fadeToBlack: true }],
+  ['card_title', 'card', 5.2, null, { fadeFromBlack: true }],
+  ['card_hook', 'card', 4.0],
+  ['s0_sphere', 'play', 6.0, 'lt_s0_sphere'],
+  ['s1_mobius', 'play', 6.0, 'lt_s1_mobius'],
+  ['s2_torus', 'play', 6.0, 'lt_s2_torus'],
+  ['s3_double', 'play', 5.8, 'lt_s3_double'],
+  ['s4_hyper', 'play', 5.8, 'lt_s4_hyper'],
+  ['s6_topo', 'play', 5.8, 'lt_topo'],
+  ['s5_split', 'play', 5.6, 'lt_split'],
+  ['card_features', 'card', 4.8],
+  ['montage', 'video', montageDur],
+  ['card_outro', 'card', 5.4, null, { fadeToBlack: true }],
 ];
 
 const clips = [];
@@ -50,12 +91,18 @@ for (const [id, type, wantDur, overlay, opt = {}] of seq) {
     if (opt.fadeToBlack) vf += `,fade=t=out:st=${(dur - 0.9).toFixed(2)}:d=0.9`;
     ff(['-framerate', String(FPS), '-loop', '1', '-t', String(dur), '-i', png,
       '-vf', vf, ...common, out]);
+  } else if (type === 'video') {
+    // clip de vídeo ya montado (montaje final): normaliza y recorta a la duración
+    const filter =
+      `[0:v]fps=${FPS},scale=1920:1080:force_original_aspect_ratio=increase,crop=1920:1080,` +
+      `trim=0:${dur},setpts=PTS-STARTPTS,format=yuv420p[v]`;
+    ff(['-i', montageSrc, '-filter_complex', filter, '-map', '[v]', '-t', String(dur), ...common, out]);
   } else {
     const fps = fpsOf(id);
     dur = Math.min(wantDur, +(avail(id) - 0.12).toFixed(2));
     const seqGlob = path.join(RAW, id, '%05d.jpg');
     const lt = path.join(RAW, overlay + '.png');
-    // base gameplay -> 1920x1080 fill, leve viñeta no; overlay lower-third con fundido
+    // base gameplay -> 1920x1080 fill; overlay lower-third con fundido
     const ltFadeOut = Math.max(0.1, dur - 0.6);
     const filter =
       `[0:v]fps=${FPS},scale=1920:1080:force_original_aspect_ratio=increase,` +
